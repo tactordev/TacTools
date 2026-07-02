@@ -3,7 +3,7 @@ import { useRef } from "react";
 
 
 
-export default function Button({ children, className, name, onClick }: { children?: React.ReactNode; className?: string; name?: string; onClick?: () => void; }) {
+export default function Button({ children, className, name, onClick }: { children?: React.ReactNode; className?: string; name?: string; onClick?: (e: React.MouseEvent) => void; }) {
     const foo = () => { return true; }
     const button = useRef<HTMLDivElement | null>(null);
 
