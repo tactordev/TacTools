@@ -18,5 +18,8 @@
     "fs:default",
     "fs:allow-read-dir",
     "fs:allow-exists"
+  ],
+  "commands": [
+    "scope_drive"
   ]
 }
