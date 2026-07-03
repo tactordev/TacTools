@@ -9,7 +9,8 @@ import {
     FileXCorner,
     FileSpreadsheet,
     FileChartColumn,
-    ChevronUp
+    ChevronUp,
+    BadgeAlert
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
@@ -58,6 +59,13 @@ export default function Notes() {
     const [path, setPath] = useState<string | null>(null);
     const [extraDropdown, setExtraDropdown] = useState<boolean>(false);
     const [contents, setContents] = useState<Record<"folders" | "files", string[]> | "loading" | null>(null);
+    const [fetchErr, setFetchErr] = useState<string | null>(null);
+    const normalisedPath = path?.replace(/^([A-Za-z]):$/, "$1:\\") ?? null;
+    const pathParts = normalisedPath ? normalisedPath.split("\\").filter(Boolean) : [];
+    const reversedPathParts = [...pathParts].reverse();
+    const visiblePathParts = reversedPathParts.slice(0, pathParts.length > 3 ? 2 : pathParts.length);
+    const extraPathParts = pathParts.slice(0, Math.max(pathParts.length - 2, 0));
+    const parentPath = normalisedPath && pathParts.length > 1 ? `${pathParts.slice(0, -1).join("\\")}\\` : normalisedPath;
 
     useEffect(() => {
         const dropdownHandler = () => {
@@ -74,7 +82,7 @@ export default function Notes() {
 
     useEffect(() => {
         if (!path) { setContents(null); return; };
-
+        setFetchErr(null);
         let isMounted = true;
         setContents("loading");
 
@@ -98,6 +106,10 @@ export default function Notes() {
                 };
                 
                 setContents({ folders: dirs, files: files });
+            }).catch((err) => {
+                setContents(null);
+                setFetchErr(err);
+                return;
             });
 
         return () => {
@@ -118,7 +130,7 @@ export default function Notes() {
 
         if (selectedPath) {
             await invoke<string>('scope_drive', { path: selectedPath });
-            setPath(selectedPath);
+            setPath(selectedPath.replace(/^([A-Za-z]):$/, "$1:\\"));
             return true;
         }
         
@@ -130,22 +142,37 @@ export default function Notes() {
     }
 
     const moveBackFolder = async (e: React.MouseEvent) => {
-        if (!path) return;
-        if (path.endsWith(e.currentTarget.textContent)) { setPath(path); return; }
+        if (!path || !normalisedPath) return;
+        const folderName = e.currentTarget.textContent?.replace(/^Folder:\s*/, "");
+
+        if (!folderName) return;
+
+        if (path.endsWith(folderName)) {
+            setPath(normalisedPath);
+            return;
+        }
+
         setContents("loading");
-        setPath(path.split(e.currentTarget.textContent)[0] + e.currentTarget.textContent);
+        const folderIndex = pathParts.lastIndexOf(folderName);
+
+        if (folderIndex < 0) {
+            setPath(normalisedPath);
+            return;
+        }
+
+        setPath(`${pathParts.slice(0, folderIndex + 1).join("\\")}\\`);
         return;
     } 
 
     const moveForwardFolder = async (e: React.MouseEvent, dirName: string) => {
-        if (!path) return;
+        if (!normalisedPath) return;
         setContents("loading");
-        setPath(path + "\\" + dirName);
+        setPath(`${normalisedPath}\\${dirName}`);
         return;
     }
 
     return (
-        <div className="flex flex-col w-full h-full mt-4 px-2 items-center">
+        <div className="flex flex-col w-full mt-4 px-2 items-center">
             {
                 !path ? (
                     <Button name="Select Folder" onClick={ openFolderSelection }>
@@ -154,14 +181,14 @@ export default function Notes() {
                 )
                 : (
                     <div className="flex flex-row ml-2 w-full justify-between relative">
-                        <div className="relative flex flex-row-reverse overflow-x-hidden overflow-y-hidden justify-end items-end">
+                        <div className="flex flex-row-reverse overflow-x-hidden overflow-y-hidden justify-end items-end sticky top-12">
                             {
-                                path.split("\\").reverse().splice(0, path.split("\\").length > 3 ? 2 : path.split("\\").length - 1).map((value, index) => <motion.div initial={{ opacity: 0, translateY: 5 }} animate={{ opacity: 1, translateY: 0 }} transition={{type: "tween", duration: 0.25, delay: (path.split("\\").reverse().splice(0, path.split("\\").length > 4 ? 3 : path.length - 1).length - index)*0.125}} key={index} className="flex flex-row gap-0.25"><Button name={`Folder: ${value}`} onClick={ moveBackFolder } className="!shadow-none !px-1"><p className="text-xs text-gray-600 select-none max-w-10 overflow-hidden whitespace-nowrap text-ellipsis">{value}</p></Button><p className="text-gray-600 select-none">/</p></motion.div>)
+                                visiblePathParts.map((value, index) => <motion.div initial={{ opacity: 0, translateY: 5 }} animate={{ opacity: 1, translateY: 0 }} transition={{type: "tween", duration: 0.25, delay: (visiblePathParts.length - index) * 0.125}} key={index} className="flex flex-row gap-0.25"><Button name={`Folder: ${value}`} onClick={ moveBackFolder } className="!shadow-none !px-1"><p className="text-xs text-gray-600 select-none max-w-10 overflow-hidden whitespace-nowrap text-ellipsis">{value}</p></Button><p className="text-gray-600 select-none">/</p></motion.div>)
                             }
                             {
-                                path.split("\\").length > 3 ? <motion.div initial={{ opacity: 0, translateY: 5 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: "tween", duration: 0.25, delay: 0 }} className="flex flex-row gap-0.25 select-none"><Button className="!shadow-none !h-fit" name="Show more" onClick={ togglExtraDropdown }><Ellipsis className="w-3.5 h-4 text-gray-600" /></Button><p className="text-gray-600">/</p></motion.div> : <></>
+                                pathParts.length > 3 ? <motion.div initial={{ opacity: 0, translateY: 5 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: "tween", duration: 0.25, delay: 0 }} className="flex flex-row gap-0.25 select-none"><Button className="!shadow-none !h-fit" name="Show more" onClick={ togglExtraDropdown }><Ellipsis className="w-3.5 h-4 text-gray-600" /></Button><p className="text-gray-600">/</p></motion.div> : <></>
                             }
-                            <Button name="Move Up" onClick = {() => { if (path.split("\\").length <= 1) { return; } setPath(path.split("\\").slice(0, -1).join("\\")) }} className={`transition-all duration-200 !px-1 !py-1 !shadow-none ${path.split("\\").length > 1 ? "" : "hover:!cursor-default hover:!bg-transparent"}`}><ChevronUp className={`w-4 h-4 ${path.split("\\").length > 1 ? "text-gray-600" : "text-gray-400"}`} /></Button>
+                            <Button name="Move Up" onClick = {() => { if (!parentPath || pathParts.length <= 1) { return; } setPath(parentPath) }} className={`transition-all duration-200 !px-1 !py-1 !shadow-none ${pathParts.length > 1 ? "" : "hover:!cursor-default hover:!bg-transparent"}`}><ChevronUp className={`w-4 h-4 ${pathParts.length > 1 ? "text-gray-600" : "text-gray-400"}`} /></Button>
                         </div>
                         
                         <AnimatePresence>
@@ -169,7 +196,7 @@ export default function Notes() {
                                 extraDropdown && (
                                     <motion.div key={"extras-dropdown"} initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "tween", duration: 0.125 }} exit={{ opacity: 0, scale: 0 }} className="absolute flex flex-col gap-1 pl-2 pr-4 py-2 mt-0.5 min-w-8 min-h-4 top-full backdrop-blur-lg bg-[#EDEDF2]/20 z-50 rounded-md shadow-sm">
                                         {
-                                            path.split("\\").splice(0, path.split("\\").length - 2).map((value, index) => <motion.div initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: ((index + 1)*0.075), duration: 0.25 }} key={index}><Button name={`Folder: ${value}`} onClick={ moveBackFolder } className="!shadow-none select-none"><p className="text-xs text-gray-600">{value}</p></Button></motion.div>)
+                                            extraPathParts.map((value, index) => <motion.div initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: ((index + 1)*0.075), duration: 0.25 }} key={index}><Button name={`Folder: ${value}`} onClick={ moveBackFolder } className="!shadow-none select-none"><p className="text-xs text-gray-600">{value}</p></Button></motion.div>)
                                         }
                                     </motion.div>
                                 )
@@ -212,6 +239,15 @@ export default function Notes() {
                         )
                     }
                 </AnimatePresence>
+                {
+                    fetchErr && (
+                        <div className="flex flex-col items-center mt-4">
+                            <BadgeAlert className="w-8 h-8 text-gray-500/60" /> 
+                            <p className="text-gray-500/60 text-lg text-center mx-2 mt-1 font-semibold">{ fetchErr.startsWith("forbidden path") ? "Insufficient permission." :
+                                fetchErr.startsWith("failed to read directory at path") ? "Invalid path." : fetchErr}</p>
+                        </div>    
+                    )
+                }
             </div>
         </div>
     )
