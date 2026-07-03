@@ -285,6 +285,9 @@ export default function Notes() {
                                                                                     </Button>
                                                                                 </motion.div>)
                                 }
+                                {
+                                    contents.files.length === 0 && contents.folders.length === 0 ? <div className="flex flex-col mt-4 gap-1 items-center"><BadgeAlert className="w-6 h-6 text-gray-500/60" /> <p className="text-base text-gray-500/60 font-semibold">No files found.</p></div> : <></>
+                                }
                             </div>
                         )
                     }
@@ -292,8 +295,8 @@ export default function Notes() {
                 {
                     fetchErr && (
                         <div className="flex flex-col items-center mt-4">
-                            <BadgeAlert className="w-8 h-8 text-gray-500/60" /> 
-                            <p className="text-gray-500/60 text-lg text-center mx-2 mt-1 font-semibold">{ fetchErr.startsWith("forbidden path") ? "Insufficient permission." :
+                            <BadgeAlert className="w-6 h-6 text-gray-500/60" /> 
+                            <p className="text-gray-500/60 text-base text-center mx-2 mt-1 font-semibold">{ fetchErr.startsWith("forbidden path") ? "Insufficient permission." :
                                 fetchErr.startsWith("failed to read directory at path") ? "Invalid path." : fetchErr}</p>
                         </div>    
                     )
