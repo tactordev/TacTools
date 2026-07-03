@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState } from "react";
 import Button from "../utils/button";
 import {
     LoaderCircle,
@@ -214,7 +214,7 @@ export default function Notes() {
         return;
     } 
 
-    const moveForwardFolder = async (e: React.MouseEvent, dirName: string) => {
+    const moveForwardFolder = async (dirName: string) => {
         if (!normalisedPath) return;
         setContents("loading");
         setPath(`${normalisedPath}\\${dirName}`);
@@ -266,7 +266,7 @@ export default function Notes() {
                         contents && contents !== "loading" && (
                             <div>
                                 { contents.folders.map((dirName, index) => <motion.div key={index} initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: (index + 1)*0.075, duration: 0.25 }} className="select-none">
-                                                                        <Button name={`${dirName}`} className="!shadow-none" onClick={ (e: React.MouseEvent) => {moveForwardFolder(e, dirName)} }>
+                                                                        <Button name={`${dirName}`} className="!shadow-none" onClick={ () => {moveForwardFolder(dirName)} }>
                                                                             <div className="flex flex-row items-center gap-2">
                                                                                 <Folder className="w-4 h-4 text-gray-600 shrink-0" />
                                                                                 <p className="text-gray-600 text-xs overflow-hidden whitespace-nowrap text-ellipsis">{ dirName }</p>
