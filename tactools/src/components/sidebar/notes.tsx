@@ -89,6 +89,8 @@ export default function Notes() {
         };
         window.addEventListener("mouseup", dropdownHandler);
 
+        setPath(localStorage.getItem("path")!)
+
         return (() => {
             window.removeEventListener("mouseup", dropdownHandler)
         });
@@ -128,6 +130,7 @@ export default function Notes() {
                 return;
             });
 
+        localStorage.setItem("path", path);
         return () => {
             isMounted = false;
         }
