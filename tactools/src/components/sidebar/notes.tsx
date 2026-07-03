@@ -131,6 +131,7 @@ export default function Notes() {
 
     const moveBackFolder = async (e: React.MouseEvent) => {
         if (!path) return;
+        if (path.endsWith(e.currentTarget.textContent)) { setPath(path); return; }
         setContents("loading");
         setPath(path.split(e.currentTarget.textContent)[0] + e.currentTarget.textContent);
         return;
@@ -155,7 +156,7 @@ export default function Notes() {
                     <div className="flex flex-row ml-2 w-full justify-between relative">
                         <div className="relative flex flex-row-reverse overflow-x-hidden overflow-y-hidden justify-end items-end">
                             {
-                                path.split("\\").reverse().splice(0, path.split("\\").length > 3 ? 2 : path.length - 1).map((value, index) => <motion.div initial={{ opacity: 0, translateY: 5 }} animate={{ opacity: 1, translateY: 0 }} transition={{type: "tween", duration: 0.25, delay: (path.split("\\").reverse().splice(0, path.split("\\").length > 4 ? 3 : path.length - 1).length - index)*0.125}} key={index} className="flex flex-row gap-0.25"><Button name={`Folder: ${value}`} onClick={ moveBackFolder } className="!shadow-none !px-1"><p className="text-xs text-gray-600 select-none max-w-10 overflow-hidden whitespace-nowrap text-ellipsis">{value}</p></Button><p className="text-gray-600 select-none">/</p></motion.div>)
+                                path.split("\\").reverse().splice(0, path.split("\\").length > 3 ? 2 : path.split("\\").length - 1).map((value, index) => <motion.div initial={{ opacity: 0, translateY: 5 }} animate={{ opacity: 1, translateY: 0 }} transition={{type: "tween", duration: 0.25, delay: (path.split("\\").reverse().splice(0, path.split("\\").length > 4 ? 3 : path.length - 1).length - index)*0.125}} key={index} className="flex flex-row gap-0.25"><Button name={`Folder: ${value}`} onClick={ moveBackFolder } className="!shadow-none !px-1"><p className="text-xs text-gray-600 select-none max-w-10 overflow-hidden whitespace-nowrap text-ellipsis">{value}</p></Button><p className="text-gray-600 select-none">/</p></motion.div>)
                             }
                             {
                                 path.split("\\").length > 3 ? <motion.div initial={{ opacity: 0, translateY: 5 }} animate={{ opacity: 1, translateY: 0 }} transition={{ type: "tween", duration: 0.25, delay: 0 }} className="flex flex-row gap-0.25 select-none"><Button className="!shadow-none !h-fit" name="Show more" onClick={ togglExtraDropdown }><Ellipsis className="w-3.5 h-4 text-gray-600" /></Button><p className="text-gray-600">/</p></motion.div> : <></>
@@ -166,9 +167,9 @@ export default function Notes() {
                         <AnimatePresence>
                             {
                                 extraDropdown && (
-                                    <motion.div key={"extras-dropdown"} initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", duration: 0.25 }} exit={{ opacity: 0, scale: 0 }} className="absolute flex flex-col gap-1 pl-2 pr-4 py-2 mt-0.5 min-w-8 min-h-4 top-full backdrop-blur-lg bg-[#EDEDF2]/20 z-50 rounded-md shadow-sm">
+                                    <motion.div key={"extras-dropdown"} initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "tween", duration: 0.125 }} exit={{ opacity: 0, scale: 0 }} className="absolute flex flex-col gap-1 pl-2 pr-4 py-2 mt-0.5 min-w-8 min-h-4 top-full backdrop-blur-lg bg-[#EDEDF2]/20 z-50 rounded-md shadow-sm">
                                         {
-                                            path.split("\\").splice(0, 2).map((value, index) => <div key={index}><Button name={`Folder: ${value}`} onClick={ moveBackFolder } className="!shadow-none select-none"><p className="text-xs text-gray-600">{value}</p></Button></div>)
+                                            path.split("\\").splice(0, path.split("\\").length - 2).map((value, index) => <motion.div initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: ((index + 1)*0.075), duration: 0.25 }} key={index}><Button name={`Folder: ${value}`} onClick={ moveBackFolder } className="!shadow-none select-none"><p className="text-xs text-gray-600">{value}</p></Button></motion.div>)
                                         }
                                     </motion.div>
                                 )
