@@ -8,7 +8,8 @@ import {
     FileText,
     FileXCorner,
     FileSpreadsheet,
-    FileChartColumn,
+    FileImage,
+    FileTerminal,
     ChevronUp,
     BadgeAlert
 } from "lucide-react";
@@ -44,14 +45,29 @@ const endingAliases: Record<string, string> = {
     "docx": "txt",
     "gdoc": "txt",
     "gsheet": "xlsx",
-    "gform": "form"
+    "gform": "xlsx",
+    "pptx": "xlsx",
+    "pdf": "txt",
+    "py": "code",
+    "js": "code",
+    "jsx": "code",
+    "tsx": "code",
+    "ts": "code",
+    "rs": "code",
+    "html": "code",
+    "css": "code",
+    "json": "code",
+    "png": "img",
+    "jpg": "img",
+    "jpeg": "img"
 }
 
 const iconClasses = "w-4 h-4 text-gray-600 shrink-0"
 const endToIcon: Record<string, React.ReactElement> = {
     "txt": <FileText className={iconClasses} />,
     "xlsx": <FileSpreadsheet className={iconClasses} />,
-    "form": <FileChartColumn className={iconClasses} />,
+    "code": <FileTerminal className={iconClasses} />,
+    "img": <FileImage className={iconClasses} />,
     "unknown": <FileXCorner className={iconClasses} />
 }
 
@@ -96,10 +112,10 @@ export default function Notes() {
 
                 for (const entry of entries) {
                     if (entry.isDirectory) {
-                        if (entry.name.startsWith(".") || entry.name.startsWith("$")) continue;
+                        if (entry.name.startsWith(".") || entry.name.startsWith("$") || entry.name.startsWith("~")) continue;
                         dirs.push(entry.name);
                     } else if (entry.isFile) {
-                        if (entry.name.endsWith(".ini") || entry.name.startsWith(".") || entry.name.startsWith("$")) continue;
+                        if (entry.name.endsWith(".ini") || entry.name.startsWith(".") || entry.name.startsWith("$") || entry.name.startsWith("~")) continue;
                         files.push(entry.name);
                     };
 
@@ -147,8 +163,7 @@ export default function Notes() {
 
         if (!folderName) return;
 
-        if (path.endsWith(folderName)) {
-            setPath(normalisedPath);
+        if (path.endsWith(folderName) || path.endsWith(`${folderName}\\`)) {
             return;
         }
 
