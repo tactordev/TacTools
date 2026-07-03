@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import Button from "../utils/button";
 import {
+    LoaderCircle,
     Folder,
     Settings2,
     Ellipsis,
@@ -22,10 +23,9 @@ import { motion, AnimatePresence } from "motion/react";
 
 function Loading() {
     return (
-        <div>
-            <p>
-                Loading..
-            </p>
+        <div className="flex flex-col mt-4 items-center">
+            <LoaderCircle className="w-6 h-6 text-gray-500/60 animate-spin" />
+            <p className="text-gray-500/60 text-xs">Stuck? Try doing another action.</p>
         </div>
     )
 }
