@@ -12,7 +12,14 @@ import {
     FileImage,
     FileTerminal,
     ChevronUp,
-    BadgeAlert
+    BadgeAlert,
+    Package,
+    Rocket,
+    Disc,
+    FileInput,
+    FileVideoCamera,
+    FileMusic,
+    FileArchive
 } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
@@ -44,6 +51,10 @@ function getFileIcon(ending: string): React.ReactElement {
 const endingAliases: Record<string, string> = {
     "docx": "txt",
     "gdoc": "txt",
+    "odt": "txt",
+    "rdp": "txt",
+    "cfg": "txt",
+    "ods": "txt",
     "gsheet": "xlsx",
     "gform": "xlsx",
     "pptx": "xlsx",
@@ -57,10 +68,24 @@ const endingAliases: Record<string, string> = {
     "html": "code",
     "css": "code",
     "json": "code",
+    "csv": "code",
+    "sii": "code",
+    "log": "code",
+    "lnk": "shortcut",
     "png": "img",
     "jpg": "img",
-    "jpeg": "img"
+    "jpeg": "img",
+    "ytd": "img",
+    "yft": "img",
+    "dds": "img",
+    "psd": "img",
+    "svg": "img",
+    "mp4": "video",
+    "mp3": "audio",
+    "zip": "compressed",
+    "gltf": "obj"
 }
+// exe,  mp4, mp3 
 
 const iconClasses = "w-4 h-4 text-gray-600 shrink-0"
 const endToIcon: Record<string, React.ReactElement> = {
@@ -68,6 +93,13 @@ const endToIcon: Record<string, React.ReactElement> = {
     "xlsx": <FileSpreadsheet className={iconClasses} />,
     "code": <FileTerminal className={iconClasses} />,
     "img": <FileImage className={iconClasses} />,
+    "obj": <Package className={iconClasses} />,
+    "ork": <Rocket className={iconClasses} />,
+    "iso": <Disc className={iconClasses} />,
+    "shortcut": <FileInput className={iconClasses} />,
+    "compressed": <FileArchive className={iconClasses} />,
+    "video": <FileVideoCamera className={iconClasses} /> ,
+    "audio": <FileMusic className={iconClasses} />,
     "unknown": <FileXCorner className={iconClasses} />
 }
 
