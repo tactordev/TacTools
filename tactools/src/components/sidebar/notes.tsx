@@ -288,7 +288,7 @@
                                                                                                     active: true,
                                                                                                     id: tabs.length + 1,
                                                                                                     value: { 
-                                                                                                        fileExt: "//", 
+                                                                                                        fileExt: fileName.split(".").pop()!, 
                                                                                                         fileIcon: getFileIcon(fileName.split(".").pop()!), 
                                                                                                         path: `${path}\\${fileName}` 
                                                                                                     } 
