@@ -2,6 +2,7 @@
 
 
 import { useState } from "react";
+import { Tab } from "../../main";
 import {
     Notebook,
     Calendar,
@@ -12,7 +13,7 @@ import Notes from "./notes";
 import Button from "../utils/button";
 
 
-export default function Sidebar() {
+export default function Sidebar({ tabs, setTabs }: { tabs: Tab[], setTabs: (_: Tab[]) => void }) {
 
     const [state, setState] = useState<"none" | "notes" | "planning" | "utilities">("none")
 
@@ -30,7 +31,7 @@ export default function Sidebar() {
                         <p className="text-lg font-semibold text-gray-500/60">No option chosen.</p>
                     </div>
                 : state === "notes" ? 
-                    <Notes />
+                    <Notes tabs={tabs} setTabs={setTabs} />
                 : state === "planning" ? 
                     <div></div>
                 :

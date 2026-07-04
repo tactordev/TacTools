@@ -2,6 +2,7 @@
 
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
+import { Tab } from "../main";
 import {
     Square,
     Copy,
@@ -9,9 +10,10 @@ import {
     X
 } from "lucide-react";
 
-export default function TitleBar() {
+export default function TitleBar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (_: Tab[]) => void; }) {
     const [maximised, setMaximised] = useState<boolean>(false);
     const appWindow = getCurrentWindow();
+
 
     useEffect(() => {
         let unlisten: (() => void) | undefined;
@@ -42,7 +44,23 @@ export default function TitleBar() {
 
     return (
         <div className="relative w-full h-8 flex flex-row items-center justify-between bg-[#EDEDF2]/40 z-0 -mb-[2px]">
-            <div className="ml-64 shadow-sm h-[1px] absolute bottom-[1px] left-0"></div>
+            <div className="absolute flex flex-row top-0 h-full items-center left-64 gap-0.5 px-0.5 z-20">
+                {
+                    tabs && tabs.map((value, index) => 
+                        <div className={`group flex flex-row gap-1 items-center select-none transition-all duration-200 h-full px-2 ${value.active ? "bg-white" : "hover:bg-gray-100"} hover:cursor-pointer`} onClick={() => { 
+                            const newTabs = tabs.map((tab) => {
+                                if (tab.id === value.id) { return { ...tab, active: true } } else { return { ...tab, active: false } }
+                            });
+                            setTabs(newTabs);
+
+                         }}>
+                            <div className={`${value.active ? "" : "opacity-40 group-hover:opacity-60"}`}>{ value.value.fileIcon }</div>
+                            <p className={`text-sm ${value.active ? "text-gray-600" : "text-gray-600/40 group-hover:text-gray-600/60"}`}> {value.title} </p>
+                            <X className={`w-4 h-4 ${value.active ? "text-gray-600" : "text-gray-600/40 group-hover:text-gray-600/60"}`} />
+                        </div>
+                    )
+                }
+            </div>
             <div data-tauri-drag-region className="flex absolute top-0 left-0 w-full h-full z-10"></div>
             <div className="group ml-1 hover:bg-[#EDEDF2] transition-all duration-200 py-0.5 hover:cursor-pointer select-none px-2 z-10 rounded-md">
                 <p className="text-sm text-gray-600 hover:text-black transition-all duration-200">Default Workspace</p>
