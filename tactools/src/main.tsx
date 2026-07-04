@@ -26,7 +26,7 @@ function App() {
   
   return (
     <React.StrictMode>
-      <main className="flex flex-col w-full h-[100vh] z-0">
+      <main className="flex flex-col w-full h-[100vh] z-0 overflow-y-hidden">
         <TitleBar tabs={tabs} setTabs={setTabs} />
         <div className="flex flex-row h-full">
           <Sidebar tabs={tabs} setTabs={setTabs} />
