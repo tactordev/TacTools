@@ -3,6 +3,7 @@ import React from "react";
 import { useState } from "react";
 import Sidebar from "./components/sidebar/sidebar";
 import TitleBar from "./components/title-bar";
+import Content from "./components/content";
 import "./globals.css";
 
 
@@ -27,7 +28,10 @@ function App() {
     <React.StrictMode>
       <main className="flex flex-col w-full h-[100vh] z-0">
         <TitleBar tabs={tabs} setTabs={setTabs} />
-        <Sidebar tabs={tabs} setTabs={setTabs} />
+        <div className="flex flex-row h-full">
+          <Sidebar tabs={tabs} setTabs={setTabs} />
+          <Content tabs={tabs} setTabs={setTabs} />
+        </div>
       </main>
     </React.StrictMode>
   );
