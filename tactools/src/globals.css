@@ -9,3 +9,11 @@
 .minimal-scrollbar:hover {
     scrollbar-color: rgba(0,0,0,0.5) #EDEDF2;
 }
+
+.hiding-scrollbar::-webkit-scrollbar {
+  height: 5px;
+}
+
+.hiding-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #EDEDF2;
+}
