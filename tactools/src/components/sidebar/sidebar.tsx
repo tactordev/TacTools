@@ -18,7 +18,7 @@ export default function Sidebar({ tabs, setTabs }: { tabs: Tab[], setTabs: (_: T
     const [state, setState] = useState<"none" | "notes" | "planning" | "utilities">("none")
 
     return (
-        <div className="flex flex-col items-center bg-[#EDEDF2]/40 mt-0.5 w-64 h-full transition-all duration-200 shadow-sm z-20 overflow-y-auto minimal-scrollbar">
+        <div className="flex flex-col items-center bg-[#EDEDF2]/40 mt-0.5 min-w-64 max-w-64 h-full transition-all duration-200 shadow-sm z-20 overflow-y-auto minimal-scrollbar">
             <div className="flex flex-row gap-2 mt-2">
                 <Button className={`${state === "notes" ? "bg-blue-300/20" : "bg-[#EDEDF2] text-gray-600"}`} name="Notes" onClick={() => setState("notes")}><Notebook className={`${state === "notes" ? "text-blue-400/90" : "text-gray-400 group-hover:text-gray-400" } w-4 h-4`}  xlinkTitle="Notes" onClick={() => setState("notes")}/></Button>
                 <Button className={`${state === "planning" ? "bg-blue-300/20" : "bg-[#EDEDF2] text-gray-600"}`} name="Calendar" onClick={() => setState("planning")}><Calendar className={`${state === "planning" ? "text-blue-400/90" : "text-gray-400 group-hover:text-gray-400" } w-4 h-4 transition-all duration-200`} xlinkTitle="Calendar" onClick={() => setState("planning")} /></Button>

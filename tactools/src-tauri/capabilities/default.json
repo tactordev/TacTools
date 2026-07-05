@@ -13,11 +13,26 @@
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
     "core:window:allow-start-dragging",
+    "core:image:allow-from-path",
     "dialog:default",
     "dialog:allow-open",
     "fs:default",
     "fs:allow-read-dir",
-    "fs:allow-exists"
+    "fs:allow-exists",
+    "fs:allow-download-read",
+    "fs:allow-document-read",
+    "fs:allow-picture-read",
+    {
+      "identifier": "opener:allow-open-path",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
+    },
+    "opener:allow-reveal-item-in-dir",
+    "opener:allow-open-url",
+    "opener:allow-default-urls"
   ],
   "commands": [
     "scope_drive"

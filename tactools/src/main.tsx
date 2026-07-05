@@ -3,7 +3,7 @@ import React from "react";
 import { useState } from "react";
 import Sidebar from "./components/sidebar/sidebar";
 import TitleBar from "./components/title-bar";
-import Content from "./components/content";
+import Content from "./components/content/content";
 import "./globals.css";
 
 
