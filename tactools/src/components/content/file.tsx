@@ -22,6 +22,17 @@ function FileViewer({ tab }: { tab: Tab }) {
         case 'md':
             return <></>;
 
+        case 'pdf':
+            return (
+                <div className="w-full h-full min-h-[600px] flex flex-col border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                    <iframe
+                        src={convertFileSrc(tab.value.path)}
+                        className="w-full h-full min-h-[600px]"
+                        title="PDF Document Viewer"
+                    />
+                </div>
+            );
+
         case 'png':
         case 'jpg':
         case 'jpeg':
@@ -31,7 +42,7 @@ function FileViewer({ tab }: { tab: Tab }) {
                 <div className="flex flex-row items-center justify-center w-full h-full">
                     <img src={convertFileSrc(tab.value.path.replace("\\\\", "\\"))} className="mx-4 my-2 w-204 h-auto" />
                 </div>
-            )
+            );
         
         default:
             return ( 

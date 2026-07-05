@@ -43,8 +43,8 @@ export default function TitleBar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (_: 
     const handleClose = () => appWindow.close();
 
     return (
-        <div className="relative w-full h-8 flex flex-row items-center justify-between bg-[#EDEDF2]/40 z-0 -mb-[2px]">
-            <div className="absolute flex flex-row top-0 h-full items-center left-64 gap-0.5 px-0.5 z-20">
+        <div className="relative w-full h-full h-8 flex flex-row items-center justify-between bg-[#EDEDF2]/40 z-0">
+            <div className="absolute flex flex-row top-0 h-full items-center left-64 mr-24 gap-0.5 px-0.5 z-20 overflow-x-scroll overflow-y-hidden">
                 {
                     tabs && tabs.map((value, index) => 
                         <div key={index} className={`group flex flex-row gap-1 items-center select-none transition-all duration-200 h-full px-2 ${value.active ? "bg-white" : "hover:bg-gray-100"} hover:cursor-pointer`} onClick={() => { 
@@ -65,7 +65,7 @@ export default function TitleBar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (_: 
             <div className="group ml-1 hover:bg-[#EDEDF2] transition-all duration-200 py-0.5 hover:cursor-pointer select-none px-2 z-10 rounded-md">
                 <p className="text-sm text-gray-600 hover:text-black transition-all duration-200">Default Workspace</p>
             </div>
-            <div className="flex w-fit h-full z-10">
+            <div className="flex w-fit h-full z-100">
                 <button id="titlebar-minimize" title="Minimise" onClick={handleMinimise} className="hover:bg-gray-300 h-full px-2 transition-all duration-200">
                     <Minus className="w-4 h-4 text-gray-600" />
                 </button>
