@@ -56,10 +56,10 @@ export default function TitleBar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (_: 
 
     return (
         <div className="relative w-full h-8 flex flex-row items-center justify-between bg-[#EDEDF2]/40 z-0">
-            <div ref={scrollbar} onWheel={handleWheel}  className="absolute flex flex-row top-0 h-full items-center left-64 max-w-[calc(100%-22rem)] gap-0.5 px-0.5 z-20 overflow-x-scroll overflow-y-hidden hiding-scrollbar">
+            <div ref={scrollbar} onWheel={handleWheel}  className="absolute flex flex-row top-0 h-full items-center left-64 max-w-[calc(100%-22rem)] gap-0.5 px-0.5 z-20 overflow-x-auto overflow-y-hidden hiding-scrollbar">
                 {
-                    tabs && tabs.map((value) => 
-                        <div className={`group flex flex-row gap-1 items-center select-none transition-all duration-200 h-full px-2 ${value.active ? "bg-white" : "hover:bg-gray-100"} hover:cursor-pointer`} onClick={() => { 
+                    tabs && tabs.map((value, index) => 
+                        <div key={index} className={`group flex flex-row gap-1 items-center select-none transition-all duration-200 h-full px-2 ${value.active ? "bg-white" : "hover:bg-gray-100"} hover:cursor-pointer z-10`} onClick={() => { 
                             const newTabs = tabs.map((tab) => {
                                 if (tab.id === value.id) { return { ...tab, active: true } } else { return { ...tab, active: false } }
                             });
@@ -70,8 +70,10 @@ export default function TitleBar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (_: 
                          >
                             <div className={`${value.active ? "" : "opacity-40 group-hover:opacity-60"}`}>{ value.value.fileIcon }</div>
                             <p className={`text-sm ${value.active ? "text-gray-600" : "text-gray-600/40 group-hover:text-gray-600/60"} overflow-hidden whitespace-nowrap text-ellipsis max-w-24`}>{value.title}</p>
-                            <X className={`w-4 h-4 ${value.active ? "text-gray-600" : "text-gray-600/40 group-hover:text-gray-600/60"}`} onClick={() => {
-                                const newTabs = tabs.map((tab) => { if (tab.id !== value.id) {return { ...tab, active: true } as Tab } }) as Tab[];
+                            <X className={`flex z-30 w-4 h-4 ${value.active ? "text-gray-600" : "text-gray-600/40 group-hover:text-gray-600/60"}`} onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation();
+                                console.log(tabs);
+                                let newTabs = tabs.filter((tab) => tab.id !== value.id);
                                 setTabs(newTabs);
                             }} />
                         </div>
