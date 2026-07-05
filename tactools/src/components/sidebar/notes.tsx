@@ -253,7 +253,7 @@
                                     )
                                 }
                             </AnimatePresence>
-                            <Button name="Switch Folder" onClick={ openFolderSelection } className="transition-all duration-200"><Settings2 className="w-4 h-4 text-gray-600" /></Button>
+                            <Button name="Switch Folder" onClick={ openFolderSelection } className="transition-all duration-200 !shadow-none flex flex-row items-center h-full"><Settings2 className="w-4 h-4 text-gray-600" /></Button>
                         </div>
                     )
                 }
