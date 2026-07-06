@@ -72,8 +72,9 @@ export default function TitleBar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (_: 
                             <p className={`text-sm ${value.active ? "text-gray-600" : "text-gray-600/40 group-hover:text-gray-600/60"} overflow-hidden whitespace-nowrap text-ellipsis max-w-24`}>{value.title}</p>
                             <X className={`flex z-30 w-4 h-4 ${value.active ? "text-gray-600" : "text-gray-600/40 group-hover:text-gray-600/60"}`} onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
-                                console.log(tabs);
                                 let newTabs = tabs.filter((tab) => tab.id !== value.id);
+                                const newActive = { ...newTabs[0], active: true } as Tab;
+                                if (newTabs.length > 0) newTabs.splice(0, 1, newActive);
                                 setTabs(newTabs);
                             }} />
                         </div>
