@@ -56,6 +56,7 @@
         "rdp": "txt",
         "cfg": "txt",
         "ods": "txt",
+        "md": "txt",
         "gsheet": "xlsx",
         "gform": "xlsx",
         "pptx": "xlsx",

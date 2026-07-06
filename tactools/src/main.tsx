@@ -37,7 +37,7 @@ function App() {
     <React.StrictMode>
       <main className="flex flex-col w-full h-[100vh] z-0 overflow-y-hidden">
         <TitleBar tabs={tabs} setTabs={setTabs} />
-        <div className="flex flex-row overflow-y-auto h-full">
+        <div className="flex flex-row overflow-y-hidden h-full">
           <Sidebar tabs={tabs} setTabs={setTabs} />
           <Content tabs={tabs} setTabs={setTabs} />
         </div>
