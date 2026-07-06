@@ -20,7 +20,11 @@ function FileViewer({ tab }: { tab: Tab }) {
 
     switch (tab.value.fileExt) {
         case 'md':
-            return <></>;
+            return (
+                <div>
+
+                </div>
+            );
 
         case 'pdf':
             return (

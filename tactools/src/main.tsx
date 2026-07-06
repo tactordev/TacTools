@@ -4,6 +4,7 @@ import { useState } from "react";
 import Sidebar from "./components/sidebar/sidebar";
 import TitleBar from "./components/title-bar";
 import Content from "./components/content/content";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import "./globals.css";
 
 
@@ -24,6 +25,14 @@ export type Tab = {
 function App() {
   const [tabs, setTabs] = useState<Tab[]>([]);
   
+  const removeActiveTab = () => {
+    let newTabs = tabs.filter((tab) => !tab.active);
+    const newActive = { ...newTabs[0], active: true } as Tab;
+    if (newTabs.length > 0) newTabs.splice(0, 1, newActive);
+    return setTabs(newTabs);
+  }
+
+  useHotkey("Mod+W", removeActiveTab)
   return (
     <React.StrictMode>
       <main className="flex flex-col w-full h-[100vh] z-0 overflow-y-hidden">
