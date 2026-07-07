@@ -9,13 +9,14 @@ import {
 } from "lucide-react";
 import { revealItemInDir, openPath } from "@tauri-apps/plugin-opener";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { useHotkey } from "@tanstack/react-hotkeys";
 
 import { EditorState } from "@codemirror/state";
 import { EditorView, ViewPlugin, Decoration, ViewUpdate } from "@codemirror/view";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { syntaxTree } from "@codemirror/language";
 import { SyntaxNodeRef } from "@lezer/common";
-import { readFile } from "@tauri-apps/plugin-fs";
+import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 
 
 function MDEditor({ tab }: { tab: Tab }) {
@@ -177,6 +178,26 @@ function MDEditor({ tab }: { tab: Tab }) {
     const container = useRef<HTMLDivElement | null>(null);
     const viewRef = useRef<EditorView | null>(null);
 
+    const save = async () => {
+        console.log("\n\n\n-------- CTRL + S --------\n");
+        const path = tab.value.path;
+        if (!path || !viewRef.current) return;
+
+        console.log("-------- Prerequisites exist --------");
+
+        const currentText = viewRef.current.state.doc.toString();
+
+        console.log("-------- Text parsed --------");
+        const data = new TextEncoder().encode(currentText);
+        await writeFile(path, data);
+        
+        console.log("-------- Data written --------");
+        console.log("\n\n-------- END --------\n\n\n\n")
+        return;
+    }
+
+    
+    useHotkey("Mod+S", save);
     useEffect(() => {
         if (!container.current) return;
 
@@ -207,6 +228,7 @@ function MDEditor({ tab }: { tab: Tab }) {
                 });
 
                 viewRef.current = view;
+
 
             } catch (error) {
                 console.error("Failed to read markdown file:", error);
