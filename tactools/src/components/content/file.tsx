@@ -227,7 +227,7 @@ function MDEditor({ tab }: { tab: Tab }) {
 
     return (
         <div className="w-full h-full flex justify-center p-8">
-            <div ref={container}  className="w-full rounded-lg overflow-hidden" />
+            <div ref={container}  className="w-full rounded-lg minimal-scrollbar" />
         </div>
     )
 }

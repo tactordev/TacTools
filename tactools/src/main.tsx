@@ -26,13 +26,49 @@ function App() {
   const [tabs, setTabs] = useState<Tab[]>([]);
   
   const removeActiveTab = () => {
+    console.log("\n\n\n-------- CTRL + W --------\n");
+    console.log(tabs);
     let newTabs = tabs.filter((tab) => !tab.active);
+    console.log(newTabs);
     const newActive = { ...newTabs[0], active: true } as Tab;
     if (newTabs.length > 0) newTabs.splice(0, 1, newActive);
+    console.log(newTabs);
+    console.log("\n-------- END --------\n\n")
     return setTabs(newTabs);
+  };
+
+  const cycleForward = () => {
+    if (tabs.length <= 1) return;
+
+    const index = tabs.findIndex((tab) => tab.active);
+    let incrementedIndex = index + 1;
+    if (index === tabs.length - 1) incrementedIndex = 0;
+    const newTabs = [...tabs];
+    newTabs.splice(index, 1, { ...tabs[index], active: false });
+    newTabs.splice(incrementedIndex, 1, { ...tabs[incrementedIndex], active: true });
+    
+    setTabs(newTabs);
+    return;
+  }
+
+  const cycleBackward = () => {
+    if (tabs.length <= 1) return;
+
+    const index = tabs.findIndex((tab) => tab.active);
+    let decrementedIndex = index - 1;
+    if (index === 0) decrementedIndex = tabs.length - 1;
+    const newTabs = [...tabs];
+    newTabs.splice(index, 1, { ...tabs[index], active: false });
+    newTabs.splice(decrementedIndex, 1, { ...tabs[decrementedIndex], active: true });
+
+    setTabs(newTabs);
+    return;
   }
 
   useHotkey("Mod+W", removeActiveTab)
+  useHotkey("Mod+Tab", cycleForward);
+  useHotkey("Mod+Shift+Tab", cycleBackward);
+
   return (
     <React.StrictMode>
       <main className="flex flex-col w-full h-[100vh] z-0 overflow-y-hidden">
