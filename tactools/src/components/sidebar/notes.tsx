@@ -290,7 +290,7 @@
                                                                                                     id: tabs.reduce((max, tab) => {return Math.max(max, tab.id)}, 0) + 1,
                                                                                                     value: { 
                                                                                                         fileExt: fileName.split(".").pop()!, 
-                                                                                                        fileIcon: getFileIcon(fileName.split(".").pop()!), 
+                                                                                                        icon: getFileIcon(fileName.split(".").pop()!), 
                                                                                                         path: `${path}\\${fileName}` 
                                                                                                     } 
                                                                                                 }

@@ -10,16 +10,20 @@ import "./globals.css";
 
 type FileTabVal = {
   fileExt: string;
-  fileIcon: React.ReactNode;
+  icon: React.ReactNode;
   path: string;
 }
 
+type PlanningTabVal = {
+  icon: React.ReactNode;
+}
+
 export type Tab = {
-  type: "file";
+  type: "file" | "planning-list";
   title: string;
   active: boolean;
   id: number;
-  value: FileTabVal;
+  value: FileTabVal | PlanningTabVal;
 }
 
 function App() {

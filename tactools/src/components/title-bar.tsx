@@ -68,7 +68,7 @@ export default function TitleBar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (_: 
                          }}
                          title={value.title}
                          >
-                            <div className={`${value.active ? "" : "opacity-40 group-hover:opacity-60"}`}>{ value.value.fileIcon }</div>
+                            <div className={`${value.active ? "" : "opacity-40 group-hover:opacity-60"}`}>{ value.value.icon }</div>
                             <p className={`text-sm ${value.active ? "text-gray-600" : "text-gray-600/40 group-hover:text-gray-600/60"} overflow-hidden whitespace-nowrap text-ellipsis max-w-24`}>{value.title}</p>
                             <X className={`flex z-30 w-4 h-4 ${value.active ? "text-gray-600" : "text-gray-600/40 group-hover:text-gray-600/60"}`} onClick={(e: React.MouseEvent) => {
                                 e.stopPropagation();
