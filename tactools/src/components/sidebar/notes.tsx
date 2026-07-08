@@ -267,7 +267,7 @@
                         {
                             contents && contents !== "loading" && (
                                 <div>
-                                    { contents.folders.map((dirName, index) => <motion.div key={index} initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: (index + 1)*0.075, duration: 0.25 }} className="select-none">
+                                    { contents.folders.map((dirName, index) => <motion.div key={index} initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: Math.min((index + 1)*0.015, 0.2), duration: 0.15 }} className="select-none">
                                                                             <Button name={`${dirName}`} className="!shadow-none" onClick={ () => {moveForwardFolder(dirName)} }>
                                                                                 <div className="flex flex-row items-center gap-2">
                                                                                     <Folder className="w-4 h-4 text-gray-600 shrink-0" />
@@ -278,7 +278,7 @@
                                     ) }
                                     { contents.folders.length > 0 && ( <div className="py-2.5" /> ) }
                                     {
-                                        contents.files.map(( fileName, index ) =>   <motion.div key={index} initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: (contents.folders.length + index + 1)*0.075, duration: 0.25 }} className="select-none">
+                                        contents.files.map(( fileName, index ) =>   <motion.div key={index} initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: Math.min((contents.folders.length + index + 1)*0.015, 0.35), duration: 0.15 }} className="select-none">
                                                                                         <Button onClick={() => { 
                                                                                             const previous = tabs.map(tab => ({ ...tab, active: false }));
                                                                                             setTabs([
