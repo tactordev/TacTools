@@ -8,11 +8,7 @@ export default function Button({ children, className, name, onClick }: { childre
     const button = useRef<HTMLDivElement | null>(null);
 
     const handleMouseDown = () => {
-        console.log("mouse down");
-
         if (!button) return false;
-
-        console.log(button.current);
 
         if (!button.current?.classList.contains("scale-95")) {
             button.current?.classList.remove("hover:scale-105");
@@ -25,8 +21,6 @@ export default function Button({ children, className, name, onClick }: { childre
 
 
     const handleMouseLeave = () => {
-        console.log("mouse leave");
-        
         if (!button) return false;
 
         if (button.current?.classList.contains("scale-95")) {
@@ -39,8 +33,6 @@ export default function Button({ children, className, name, onClick }: { childre
     }
 
     const handleMouseUp = () => {
-        console.log("mouse up");
-
         if (!button) return false;
 
         if (button.current?.classList.contains("scale-95")) {
