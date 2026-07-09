@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Button from "../utils/button";
-import { Hash, Plus } from "lucide-react";
+import { Hash, Plus, Inbox } from "lucide-react";
 import { Tab } from "../../main";
 
 function title(value: string) {
@@ -77,6 +77,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
         setTimeout(() => {
             const form = document.getElementById(`editname-${index}`) as HTMLFormElement;
             (form.children[0] as HTMLInputElement).focus();
+            (form.children[0] as HTMLInputElement).select();
         }, 50);
     };
 
@@ -98,9 +99,9 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
     }
 
     return (
-        <div className="px-4 flex flex-col w-full h-full">
+        <div className="px-2 flex flex-col w-full h-full">
             <div className="w-full mb-2 mt-4 flex flex-row justify-end">
-                <Button onClick={addNewList}>
+                <Button name="New List" onClick={addNewList}>
                     <Plus className="text-gray-600 w-4 h-4" />
                 </Button>
             </div>
@@ -110,7 +111,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
                         lists.map((value: string, index: number) => {
                             return (
                                 <motion.div onAuxClick={ rightClick }  className="flex flex-col" key={index} id={`motiondiv-${index}`} onDoubleClick={ editName } initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: Math.min((index + 1)*0.015, 0.2), duration: 0.15 }} >
-                                    <Button className="flex flex-row items-center gap-1 mt-1 !shadow-none !py-0 has-[:focus]:bg-blue-200/30" name={title(lists[index])} onClick={() => {
+                                    <Button className="flex flex-row items-center gap-2 mt-1 !shadow-none !py-0 has-[:focus]:bg-blue-200/30" name={title(lists[index])} onClick={() => {
                                         const previous = tabs.map(tab => ({ ...tab, active: false }));
                                         setTabs([
                                             ...previous, 
@@ -124,7 +125,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
                                                 }
                                             } as Tab
                                         ])}}>
-                                        <Hash className="w-3 h-3 text-gray-600/80" />  
+                                        { value === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80"/> : <Hash className="w-4 h-4 text-gray-600/80" />  }
                                         {
                                             editing === index ? (
                                                 <form className="flex flex-row items-center" id={`editname-${index}`} onSubmit={ changeName } onBlur={ changeName } >
