@@ -13,55 +13,46 @@ function title(value: string) {
 
 
 export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tabs: Tab[]) => void; }) {
-    const [lists, setLists] = useState<string[]>(["overview"]);
-    const [editing, setEditing] = useState<number | false>(false);
+    const [lists, setLists] = useState<{ name: string; id: number; }[]>(() => {
+        if (typeof window === "undefined") return [{ name: "overview", index: 0 }];
 
+        const saved = localStorage.getItem("listNames");
+        if (saved) return [ { name: "overview", id: 0}, ...JSON.parse(saved).values ];
+
+        return [{ name: "overview", id: 0 }];
+    });
+
+    const [lastId, setLastId] = useState<number>(() => {
+        if (typeof window === "undefined") return 0;
+        
+        const data = localStorage.getItem("lastListId");
+        return data ? parseInt(data) : 0;
+    });
+
+    const [editing, setEditing] = useState<number | false>(false);
     const listRender = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        
-        const handleClick = (e: Event) => {
-            const form = document.getElementById(`editname-${editing}`) as HTMLFormElement;
-            if (!form || !editing) return;
-            const l = lists.splice(editing, 1, new FormData(form).get("newName") as string)
-            setLists(l);
-        }
-        window.addEventListener("click", handleClick);
-
-
-
-        if (lists && localStorage.getItem("listNames")) {
-            const saved = localStorage.getItem("listNames");
-            setLists([...lists, ...saved!.split(", ")]);
-        }
-
-
-        return () => {
-            window.removeEventListener("click", handleClick);
-        };
-
-    }, []);
+        localStorage.setItem('lastListId', lastId.toString());
+    }, [lastId]);
 
     useEffect(() => {
-        const stored = localStorage.getItem("listNames");
-        const parsed = lists.filter((value) => value !== "overview").join(", ");
-
-        if (stored === parsed) return;
-
-
-        return localStorage.setItem("listNames", parsed);
-
+        const parsed = {
+            values: lists.filter((value) => value.name !== "overview")
+        };
+        localStorage.setItem("listNames", JSON.stringify(parsed));
     }, [lists]);
 
     const addNewList = (e: React.MouseEvent) => {
         e.preventDefault();
-        if (!listRender) return;
-        setLists([...lists, "untitled"]);
+        if (!listRender || lastId === null) return;
+        const id = lastId + 1
+        setLists([...lists, { name: "untitled", id: id }]);
+        setLastId(id);
         setEditing(lists.length);
-
+        
         setTimeout(() => {
-            const index = lists.length;
-            const form = document.getElementById(`editname-${index}`) as HTMLFormElement;
+            const form = document.getElementById(`${id}`) as HTMLFormElement;
             (form.children[0] as HTMLInputElement).focus();
             (form.children[0] as HTMLInputElement).select();
         }, 100);
@@ -85,12 +76,20 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
     const changeName = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const index = e.currentTarget.id.split("-")[1];
+        const targetId = parseInt(e.currentTarget.id);
+        const data = new FormData(e.currentTarget).get("newName") as string;
+
+        const index = lists.findIndex((list) => list.id === targetId);
+        if (index === -1) return;
+
+        const updLists = [...lists];
+        updLists[index] = {
+            name: data.trim() === "" ? "Untitled" : data,
+            id: targetId
+        };
+
         setEditing(false);
-        const l = [...lists];
-        const data = new FormData(e.currentTarget).get("newName") as string
-        l.splice(parseInt(index), 1, data === "" ? "Untitled" : data)
-        setLists(l);
+        setLists(updLists);
         return;
     };
 
@@ -108,32 +107,32 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
             <div ref={listRender}>
                 <AnimatePresence>
                     {
-                        lists.map((value: string, index: number) => {
+                        lists.map((value: {name: string; id: number;}, index: number) => {
                             return (
                                 <motion.div onAuxClick={ rightClick }  className="flex flex-col" key={index} id={`motiondiv-${index}`} onDoubleClick={ editName } initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: Math.min((index + 1)*0.015, 0.2), duration: 0.15 }} >
-                                    <Button className="flex flex-row items-center gap-2 mt-1 !shadow-none !py-0 has-[:focus]:bg-blue-200/30" name={title(lists[index])} onClick={() => {
+                                    <Button className="flex flex-row items-center gap-2 mt-1 !shadow-none !py-0 has-[:focus]:bg-blue-200/30" name={title(lists[index].name)} onClick={() => {
                                         const previous = tabs.map(tab => ({ ...tab, active: false }));
                                         setTabs([
                                             ...previous, 
                                             { 
                                                 type: "planning-list", 
-                                                title: title(value), 
+                                                title: title(value.name), 
                                                 active: true,
                                                 id: tabs.reduce((max, tab) => {return Math.max(max, tab.id)}, 0) + 1,
                                                 value: { 
-                                                    icon: <Hash className="w-3 h-3 text-gray-600/80" />   
+                                                    icon: value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80" /> : <Hash className="w-3 h-3 text-gray-600/80" />   
                                                 }
                                             } as Tab
                                         ])}}>
-                                        { value === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80"/> : <Hash className="w-4 h-4 text-gray-600/80" />  }
+                                        { value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80"/> : <Hash className="w-4 h-4 text-gray-600/80" />  }
                                         {
                                             editing === index ? (
-                                                <form className="flex flex-row items-center" id={`editname-${index}`} onSubmit={ changeName } onBlur={ changeName } >
-                                                    <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" placeholder={`List name [${value}]...`} spellCheck={false} defaultValue={value} name="newName" type="text" autoComplete="off" />
+                                                <form className="flex flex-row items-center" id={`${value.id}`} onSubmit={ changeName } onBlur={ changeName } >
+                                                    <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" placeholder={`List name [${value}]...`} spellCheck={false} defaultValue={value.name} name="newName" type="text" autoComplete="off" />
                                                 </form>
                                             ) : (
                                                 <p className="text-sm text-gray-600 select-none my-0.5">
-                                                    { title(value) }
+                                                    { title(value.name) }
                                                 </p>
                                             )
                                         }

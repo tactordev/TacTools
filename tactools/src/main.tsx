@@ -23,6 +23,7 @@ export type Tab = {
   title: string;
   active: boolean;
   id: number;
+  locatorId?: string;
   value: FileTabVal | PlanningTabVal;
 }
 
