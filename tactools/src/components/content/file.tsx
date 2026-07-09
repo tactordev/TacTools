@@ -1,6 +1,6 @@
 "use client";
 
-import { Tab } from "../../main";
+import { Tab, FileTabVal } from "../../main";
 import { useEffect, useRef, useState } from "react";
 import Button from "../utils/button";
 import {
@@ -179,25 +179,25 @@ function MDEditor({ tab }: { tab: Tab }) {
     const viewRef = useRef<EditorView | null>(null);
 
     const save = async () => {
-        console.log("\n\n\n-------- CTRL + S --------\n");
+        
+        if (!('path' in tab.value)) return;
         const path = tab.value.path;
         if (!path || !viewRef.current) return;
 
-        console.log("-------- Prerequisites exist --------");
-
         const currentText = viewRef.current.state.doc.toString();
 
-        console.log("-------- Text parsed --------");
         const data = new TextEncoder().encode(currentText);
         await writeFile(path, data);
         
-        console.log("-------- Data written --------");
-        console.log("\n\n-------- END --------\n\n\n\n")
         return;
     }
 
     
     useHotkey("Mod+S", save);
+
+
+    if (!('path' in tab.value)) return ( <p> unknown type </p>);
+
     useEffect(() => {
         if (!container.current) return;
 
@@ -205,6 +205,7 @@ function MDEditor({ tab }: { tab: Tab }) {
 
         async function loadFileAndInitEditor() {
             try {
+                if (!('path' in tab.value)) return;
                 const data = await readFile(tab.value.path);
                 const textContent = new TextDecoder().decode(data);
 
@@ -255,12 +256,14 @@ function MDEditor({ tab }: { tab: Tab }) {
 }
 
 function FileViewer({ tab }: { tab: Tab }) {
+    if (!('path' in tab.value)) return;
+    const path = tab.value.path;
     const handleFE = async () => {
-        await revealItemInDir(tab.value.path.replace("\\\\", "\\"));
+        await revealItemInDir(path.replace("\\\\", "\\"));
     };
 
     const handleOpen = async () => {
-        await openPath(tab.value.path.replace("\\\\", "\\"));
+        await openPath(path.replace("\\\\", "\\"));
     };
 
 

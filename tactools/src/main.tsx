@@ -8,7 +8,7 @@ import { useHotkey } from "@tanstack/react-hotkeys";
 import "./globals.css";
 
 
-type FileTabVal = {
+export type FileTabVal = {
   fileExt: string;
   icon: React.ReactNode;
   path: string;
