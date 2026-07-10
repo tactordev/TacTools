@@ -3,17 +3,72 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Button from "../utils/button";
-import { Hash, Plus, Inbox } from "lucide-react";
+import { Hash, Plus, Inbox, Edit, Trash2 } from "lucide-react";
 import { Tab } from "../../main";
+import { createPortal } from "react-dom";
 
 function title(value: string) {
     return [value.slice(0, 1).toUpperCase(), value.slice(1, value.length).toLowerCase()].join("");
 }
 
 
+function ContextMenu(
+    {
+        x,
+        y,
+        tabs,
+        setTabs,
+        lists,
+        setLists,
+        onBlur
+    }: {
+        x: number;
+        y: number;
+        tabs: Tab[];
+        setTabs: (tabs: Tab[]) => void;
+        lists: { name: string; id: number; }[];
+        setLists: (lists: { name: string; id: number; }[]) => void;
+        onBlur: () => void;
+    }
+) {
+
+    const menuRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        menuRef.current?.focus();
+    }, []);
+
+    const menu = ( 
+        <motion.div
+            ref={menuRef}
+            tabIndex={0}
+            onBlur={onBlur}
+            onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); return; }}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "tween", duration: 0.125 }}
+            exit={{ opacity: 0, scale: 0 }}
+            style={{ top: y, left: x }}
+            className={`absolute flex flex-col gap-1 px-2 py-2 z-100 focus:outline-none hover:outline-none backdrop-blur-lg bg-[#EDEDF2]/20 z-50 rounded-md shadow-sm`}
+        >
+            <Button name="Rename"  className="flex flex-row items-center justify-start gap-3 !shadow-none">
+                <Edit className="w-4 h-4 text-gray-600" />
+                <p className="text-gray-600 text-sm">Rename</p>
+            </Button>
+            <Button name="Delete"  className="flex flex-row items-center justify-start gap-3 !shadow-none">
+                <Trash2 className="w-4 h-4 text-gray-600" />
+                <p className="text-gray-600 text-sm">Delete</p>
+            </Button>
+        </motion.div>
+    );
+
+    return createPortal(menu, document.body);
+}
+
 
 export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tabs: Tab[]) => void; }) {
     const clickTimeoutRef = useRef<number | null>(null);
+    const listRender = useRef<HTMLDivElement | null>(null);
 
     const [lists, setLists] = useState<{ name: string; id: number; }[]>(() => {
         if (typeof window === "undefined") return [{ name: "overview", index: 0 }];
@@ -32,7 +87,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
     });
 
     const [editing, setEditing] = useState<number | false>(false);
-    const listRender = useRef<HTMLDivElement | null>(null);
+    const [ctxMenu, setCtxMenu] = useState<{ id: number, x: number, y: number } | false>(false);
 
     useEffect(() => {
         localStorage.setItem('lastListId', lastId.toString());
@@ -66,7 +121,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
         e.preventDefault(); 
 
         if (clickTimeoutRef.current) { clearTimeout(clickTimeoutRef.current); clickTimeoutRef.current = null; }
-        console.log(e.currentTarget);
+
         const id = e.currentTarget.id;
         const index = id.split("-")[1];
         if (!index) return;
@@ -99,8 +154,10 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
         return;
     };
 
-    const rightClick = () => {
-        console.log("Right click");
+    const rightClick = (e: React.MouseEvent, index: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return setCtxMenu({ id: lists[index].id, x: e.clientX, y: e.clientY });
     }
 
     return (
@@ -115,44 +172,53 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
                     {
                         lists.map((value: {name: string; id: number;}, index: number) => {
                             return (
-                                <motion.div onAuxClick={ rightClick }  className="flex flex-col" key={index} id={`motiondiv-${index}`} onDoubleClick={ editName } initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: Math.min((index + 1)*0.015, 0.2), duration: 0.15 }} >
-                                    <Button className="flex flex-row items-center gap-2 mt-1 !shadow-none !py-0 has-[:focus]:bg-blue-200/30" name={title(lists[index].name)} onClick={(e) => {
-                                        if (editing === index || e.detail > 1) return;
+                                <div>
+                                    <motion.div  className="flex flex-col relative" key={index} id={`motiondiv-${index}`} onContextMenu={ (e: React.MouseEvent) => { rightClick(e, index); } } onDoubleClick={ editName } initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: Math.min((index + 1)*0.015, 0.2), duration: 0.15 }} >
+                                        <Button  className="flex flex-row items-center gap-2 mt-1 !shadow-none !py-0 has-[:focus]:bg-blue-200/30" name={title(lists[index].name)} onClick={(e) => {
+                                            if (editing === index || e.detail > 1) return;
 
-                                        if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+                                            if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
 
-                                        clickTimeoutRef.current = setTimeout(() => {
-                                            const previous = tabs.map(tab => ({ ...tab, active: false }));
-                                            setTabs([
-                                                ...previous, 
-                                                { 
-                                                    type: "planning-list", 
-                                                    title: title(value.name), 
-                                                    active: true,
-                                                    id: tabs.reduce((max, tab) => {return Math.max(max, tab.id)}, 0) + 1,
-                                                    value: { 
-                                                        icon: value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80" /> : <Hash className="w-3 h-3 text-gray-600/80" />   
-                                                    },
-                                                    locatorId: value.id.toString()
-                                                } as Tab
-                                            ]);
-                                            clickTimeoutRef.current = null;
-                                        }, 200);
-                                        }}>
-                                        { value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80"/> : <Hash className="w-4 h-4 text-gray-600/80" />  }
+                                            clickTimeoutRef.current = setTimeout(() => {
+                                                const previous = tabs.map(tab => ({ ...tab, active: false }));
+                                                setTabs([
+                                                    ...previous, 
+                                                    { 
+                                                        type: "planning-list", 
+                                                        title: title(value.name), 
+                                                        active: true,
+                                                        id: tabs.reduce((max, tab) => {return Math.max(max, tab.id)}, 0) + 1,
+                                                        value: { 
+                                                            icon: value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80" /> : <Hash className="w-3 h-3 text-gray-600/80" />   
+                                                        },
+                                                        locatorId: value.id.toString()
+                                                    } as Tab
+                                                ]);
+                                                clickTimeoutRef.current = null;
+                                            }, 200);
+                                            }}>
+                                            { value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80"/> : <Hash className="w-4 h-4 text-gray-600/80" />  }
+                                            {
+                                                editing === index ? (
+                                                    <form onClick={(e) => { e.preventDefault(); }} className="flex flex-row items-center" id={`${value.id}`} onSubmit={ changeName } onBlur={ changeName } >
+                                                        <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" placeholder={`List name [${value}]...`} spellCheck={false} defaultValue={value.name} name="newName" type="text" autoComplete="off" />
+                                                    </form>
+                                                ) : (
+                                                    <p className="text-sm text-gray-600 select-none my-0.5">
+                                                        { title(value.name) }
+                                                    </p>
+                                                )
+                                            }
+                                        </Button>
+                                    </motion.div>
+                                    <AnimatePresence>
                                         {
-                                            editing === index ? (
-                                                <form onClick={(e) => { e.preventDefault(); }} className="flex flex-row items-center" id={`${value.id}`} onSubmit={ changeName } onBlur={ changeName } >
-                                                    <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" placeholder={`List name [${value}]...`} spellCheck={false} defaultValue={value.name} name="newName" type="text" autoComplete="off" />
-                                                </form>
-                                            ) : (
-                                                <p className="text-sm text-gray-600 select-none my-0.5">
-                                                    { title(value.name) }
-                                                </p>
+                                            ctxMenu && ctxMenu.id === value.id && (
+                                                <ContextMenu tabs={tabs} setTabs={setTabs} lists={lists} setLists={setLists} onBlur={ () => setCtxMenu(false) } x={ctxMenu.x} y={ctxMenu.y} />
                                             )
                                         }
-                                    </Button>
-                                </motion.div>
+                                    </AnimatePresence>
+                                </div>
                             );
                         })
                     }
