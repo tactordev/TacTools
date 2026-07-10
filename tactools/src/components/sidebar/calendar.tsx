@@ -13,6 +13,8 @@ function title(value: string) {
 
 
 export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tabs: Tab[]) => void; }) {
+    const clickTimeoutRef = useRef<number | null>(null);
+
     const [lists, setLists] = useState<{ name: string; id: number; }[]>(() => {
         if (typeof window === "undefined") return [{ name: "overview", index: 0 }];
 
@@ -61,12 +63,16 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
 
 
     const editName = (e: React.MouseEvent) => {
+        e.preventDefault(); 
+
+        if (clickTimeoutRef.current) { clearTimeout(clickTimeoutRef.current); clickTimeoutRef.current = null; }
+        console.log(e.currentTarget);
         const id = e.currentTarget.id;
         const index = id.split("-")[1];
         if (!index) return;
         setEditing(parseInt(index));
         setTimeout(() => {
-            const form = document.getElementById(`editname-${index}`) as HTMLFormElement;
+            const form = document.getElementById(`${lists[parseInt(index)].id}`) as HTMLFormElement;
             (form.children[0] as HTMLInputElement).focus();
             (form.children[0] as HTMLInputElement).select();
         }, 50);
@@ -110,24 +116,33 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
                         lists.map((value: {name: string; id: number;}, index: number) => {
                             return (
                                 <motion.div onAuxClick={ rightClick }  className="flex flex-col" key={index} id={`motiondiv-${index}`} onDoubleClick={ editName } initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: Math.min((index + 1)*0.015, 0.2), duration: 0.15 }} >
-                                    <Button className="flex flex-row items-center gap-2 mt-1 !shadow-none !py-0 has-[:focus]:bg-blue-200/30" name={title(lists[index].name)} onClick={() => {
-                                        const previous = tabs.map(tab => ({ ...tab, active: false }));
-                                        setTabs([
-                                            ...previous, 
-                                            { 
-                                                type: "planning-list", 
-                                                title: title(value.name), 
-                                                active: true,
-                                                id: tabs.reduce((max, tab) => {return Math.max(max, tab.id)}, 0) + 1,
-                                                value: { 
-                                                    icon: value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80" /> : <Hash className="w-3 h-3 text-gray-600/80" />   
-                                                }
-                                            } as Tab
-                                        ])}}>
+                                    <Button className="flex flex-row items-center gap-2 mt-1 !shadow-none !py-0 has-[:focus]:bg-blue-200/30" name={title(lists[index].name)} onClick={(e) => {
+                                        if (editing === index || e.detail > 1) return;
+
+                                        if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+
+                                        clickTimeoutRef.current = setTimeout(() => {
+                                            const previous = tabs.map(tab => ({ ...tab, active: false }));
+                                            setTabs([
+                                                ...previous, 
+                                                { 
+                                                    type: "planning-list", 
+                                                    title: title(value.name), 
+                                                    active: true,
+                                                    id: tabs.reduce((max, tab) => {return Math.max(max, tab.id)}, 0) + 1,
+                                                    value: { 
+                                                        icon: value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80" /> : <Hash className="w-3 h-3 text-gray-600/80" />   
+                                                    },
+                                                    locatorId: value.id.toString()
+                                                } as Tab
+                                            ]);
+                                            clickTimeoutRef.current = null;
+                                        }, 200);
+                                        }}>
                                         { value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80"/> : <Hash className="w-4 h-4 text-gray-600/80" />  }
                                         {
                                             editing === index ? (
-                                                <form className="flex flex-row items-center" id={`${value.id}`} onSubmit={ changeName } onBlur={ changeName } >
+                                                <form onClick={(e) => { e.preventDefault(); }} className="flex flex-row items-center" id={`${value.id}`} onSubmit={ changeName } onBlur={ changeName } >
                                                     <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" placeholder={`List name [${value}]...`} spellCheck={false} defaultValue={value.name} name="newName" type="text" autoComplete="off" />
                                                 </form>
                                             ) : (
