@@ -16,21 +16,26 @@ function ContextMenu(
     {
         x,
         y,
+        id,
         tabs,
         setTabs,
         lists,
         setLists,
-        onBlur
+        onBlur,
+        edit
     }: {
         x: number;
         y: number;
+        id: number;
         tabs: Tab[];
         setTabs: (tabs: Tab[]) => void;
         lists: { name: string; id: number; }[];
         setLists: (lists: { name: string; id: number; }[]) => void;
         onBlur: () => void;
+        edit: (e: React.MouseEvent, id?: number) => void;
     }
 ) {
+    const [confirmDelete, setConfirmDelete] = useState<boolean>(false);
 
     const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -51,14 +56,21 @@ function ContextMenu(
             style={{ top: y, left: x }}
             className={`absolute flex flex-col gap-1 px-2 py-2 z-100 focus:outline-none hover:outline-none backdrop-blur-lg bg-[#EDEDF2]/20 z-50 rounded-md shadow-sm`}
         >
-            <Button name="Rename"  className="flex flex-row items-center justify-start gap-3 !shadow-none">
+            <Button onClick={(e: React.MouseEvent) => { edit(e, id); }} name="Rename"  className="flex flex-row items-center justify-start gap-3 !shadow-none select-none">
                 <Edit className="w-4 h-4 text-gray-600" />
                 <p className="text-gray-600 text-sm">Rename</p>
             </Button>
-            <Button name="Delete"  className="flex flex-row items-center justify-start gap-3 !shadow-none">
-                <Trash2 className="w-4 h-4 text-gray-600" />
-                <p className="text-gray-600 text-sm">Delete</p>
-            </Button>
+            { lists.find((list) => list.id === id)!.name !== "overview" ? (
+                <Button onClick={(e: React.MouseEvent) => {
+                    if (!confirmDelete) return setConfirmDelete(true);
+
+                    const l = lists.filter((list) => list.id !== id);
+                    return setLists(l);
+                }} name="Delete"  className={`flex flex-row items-center justify-start gap-3 !shadow-none select-none bg-red-200/80 hover:!bg-red-300/30 ${confirmDelete ? "flash-red" : ""}`}>
+                    <Trash2 className="w-4 h-4 text-red-500/60" />
+                    <p className={`text-red-500/60 text-sm min-w-20`}>{ confirmDelete ? "Confirm?" : "Delete" }</p>
+                </Button>
+            ) : <></> }
         </motion.div>
     );
 
@@ -117,17 +129,25 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
     };
 
 
-    const editName = (e: React.MouseEvent) => {
+    const editName = (e: React.MouseEvent, id?: number) => {
+        let index;
+
         e.preventDefault(); 
 
         if (clickTimeoutRef.current) { clearTimeout(clickTimeoutRef.current); clickTimeoutRef.current = null; }
 
-        const id = e.currentTarget.id;
-        const index = id.split("-")[1];
+        if (id) {
+            index = lists.findIndex((list) => list.id === id);
+        } else {
+            index = parseInt(e.currentTarget.id.split("-")[1]);
+        }
+        if (!id) { const id = e.currentTarget.id; }
+        
         if (!index) return;
-        setEditing(parseInt(index));
+
+        setEditing(index);
         setTimeout(() => {
-            const form = document.getElementById(`${lists[parseInt(index)].id}`) as HTMLFormElement;
+            const form = document.getElementById(`${lists[index].id}`) as HTMLFormElement;
             (form.children[0] as HTMLInputElement).focus();
             (form.children[0] as HTMLInputElement).select();
         }, 50);
@@ -214,7 +234,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
                                     <AnimatePresence>
                                         {
                                             ctxMenu && ctxMenu.id === value.id && (
-                                                <ContextMenu tabs={tabs} setTabs={setTabs} lists={lists} setLists={setLists} onBlur={ () => setCtxMenu(false) } x={ctxMenu.x} y={ctxMenu.y} />
+                                                <ContextMenu tabs={tabs} setTabs={setTabs} lists={lists} setLists={setLists} onBlur={ () => setCtxMenu(false) } x={ctxMenu.x} y={ctxMenu.y} id={value.id} edit={ editName } />
                                             )
                                         }
                                     </AnimatePresence>
