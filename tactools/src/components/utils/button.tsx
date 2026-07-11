@@ -46,7 +46,7 @@ export default function Button({ children, className, name, onClick }: { childre
 
 
     return (
-        <div ref={button} className={`group hover:cursor-pointer hover:bg-blue-200/30 scale-100 hover:scale-105 px-2 py-1 rounded-md shadow-sm transition-all duration-200 ${className}`}  onClick={onClick ?? foo } title={name ?? "Button"} onMouseDown={ handleMouseDown } onMouseUp={ handleMouseUp } onMouseLeave={handleMouseLeave}>
+        <div ref={button} className={`group hover:cursor-pointer hover:bg-blue-200/30 scale-100 hover:scale-105 px-2 py-1 rounded-md shadow-sm transition-all duration-200 select-none ${className}`}  onClick={onClick ?? foo } title={name ?? "Button"} onMouseDown={ handleMouseDown } onMouseUp={ handleMouseUp } onMouseLeave={handleMouseLeave}>
             { children }
         </div>
     )

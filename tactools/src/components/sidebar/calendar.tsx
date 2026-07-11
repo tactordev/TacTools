@@ -194,8 +194,8 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
                     {
                         lists.map((value: {name: string; id: number;}, index: number) => {
                             return (
-                                <div>
-                                    <motion.div  className="flex flex-col relative" key={index} id={`motiondiv-${index}`} onContextMenu={ (e: React.MouseEvent) => { rightClick(e, index); } } onDoubleClick={ editName } initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: Math.min((index + 1)*0.015, 0.2), duration: 0.15 }} >
+                                <div key={`list-${value.id}`}>
+                                    <motion.div  className="flex flex-col relative" id={`motiondiv-${index}`} onContextMenu={ (e: React.MouseEvent) => { rightClick(e, index); } } onDoubleClick={ editName } initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "tween", delay: Math.min((index + 1)*0.015, 0.2), duration: 0.15 }} >
                                         <Button  className="flex flex-row items-center gap-2 mt-1 !shadow-none !py-0 has-[:focus]:bg-blue-200/30" name={title(lists[index].name)} onClick={(e) => {
                                             if (editing === index || e.detail > 1) return;
 
