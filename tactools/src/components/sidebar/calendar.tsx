@@ -69,7 +69,7 @@ function ContextMenu(
 
                     const l = lists.filter((list) => list.id !== id);
                     return setLists(l);
-                }} name="Delete"  className={`flex flex-row items-center justify-start gap-3 !shadow-none select-none bg-red-200/80 hover:!bg-red-300/30 ${confirmDelete ? "flash-red" : ""}`}>
+                }} name="Delete"  className={`flex flex-row items-center justify-start gap-3 !shadow-none select-none bg-red-300/30 hover:!bg-red-300/20 ${confirmDelete ? "flash-red" : ""}`}>
                     <Trash2 className="w-4 h-4 text-red-500/60" />
                     <p className={`text-red-500/60 text-sm min-w-20`}>{ confirmDelete ? "Confirm?" : "Delete" }</p>
                 </Button>
