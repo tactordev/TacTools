@@ -61,8 +61,11 @@ function ContextMenu(
                 <p className="text-gray-600 text-sm">Rename</p>
             </Button>
             { lists.find((list) => list.id === id)!.name !== "overview" ? (
-                <Button onClick={(e: React.MouseEvent) => {
+                <Button onClick={() => {
                     if (!confirmDelete) return setConfirmDelete(true);
+
+                    const ts = tabs.filter((tab) => tab.locatorId !== id.toString());
+                    setTabs(ts);
 
                     const l = lists.filter((list) => list.id !== id);
                     return setLists(l);
@@ -141,7 +144,6 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
         } else {
             index = parseInt(e.currentTarget.id.split("-")[1]);
         }
-        if (!id) { const id = e.currentTarget.id; }
         
         if (!index) return;
 
