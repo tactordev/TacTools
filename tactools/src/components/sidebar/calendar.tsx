@@ -8,7 +8,7 @@ import { Tab } from "../../main";
 import ContextMenu from "../utils/context-menu";
 
 
-function title(value: string) {
+export function title(value: string) {
     return [value.slice(0, 1).toUpperCase(), value.slice(1, value.length)].join("");
 }
 
