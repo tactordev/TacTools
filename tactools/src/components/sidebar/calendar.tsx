@@ -6,13 +6,15 @@ import Button from "../utils/button";
 import { Hash, Plus, Inbox, Edit, Trash2 } from "lucide-react";
 import { Tab } from "../../main";
 import { createPortal } from "react-dom";
+import ContextMenu from "../utils/context-menu";
+
 
 function title(value: string) {
     return [value.slice(0, 1).toUpperCase(), value.slice(1, value.length)].join("");
 }
 
 
-function ContextMenu(
+function CTXMenu(
     {
         x,
         y,
@@ -37,25 +39,9 @@ function ContextMenu(
 ) {
     const [confirmDelete, setConfirmDelete] = useState<boolean>(false);
 
-    const menuRef = useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => {
-        menuRef.current?.focus();
-    }, []);
-
-    const menu = ( 
-        <motion.div
-            ref={menuRef}
-            tabIndex={0}
-            onBlur={onBlur}
-            onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); return; }}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "tween", duration: 0.125 }}
-            exit={{ opacity: 0, scale: 0 }}
-            style={{ top: y, left: x }}
-            className={`absolute flex flex-col gap-1 px-2 py-2 z-100 focus:outline-none hover:outline-none backdrop-blur-lg bg-[#EDEDF2]/20 z-50 rounded-md shadow-sm`}
-        >
+    return (
+        <ContextMenu x={x} y={y} id={id} onBlur={onBlur}>
             <Button onClick={(e: React.MouseEvent) => { edit(e, id); }} name="Rename"  className="flex flex-row items-center justify-start gap-3 !shadow-none select-none">
                 <Edit className="w-4 h-4 text-gray-600" />
                 <p className="text-gray-600 text-sm">Rename</p>
@@ -74,10 +60,8 @@ function ContextMenu(
                     <p className={`text-red-500/60 text-sm min-w-20`}>{ confirmDelete ? "Confirm?" : "Delete" }</p>
                 </Button>
             ) : <></> }
-        </motion.div>
+        </ContextMenu>
     );
-
-    return createPortal(menu, document.body);
 }
 
 
@@ -236,7 +220,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
                                     <AnimatePresence>
                                         {
                                             ctxMenu && ctxMenu.id === value.id && (
-                                                <ContextMenu tabs={tabs} setTabs={setTabs} lists={lists} setLists={setLists} onBlur={ () => setCtxMenu(false) } x={ctxMenu.x} y={ctxMenu.y} id={value.id} edit={ editName } />
+                                                <CTXMenu tabs={tabs} setTabs={setTabs} lists={lists} setLists={setLists} onBlur={ () => setCtxMenu(false) } x={ctxMenu.x} y={ctxMenu.y} id={value.id} edit={ editName } />
                                             )
                                         }
                                     </AnimatePresence>
