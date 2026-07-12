@@ -9,10 +9,11 @@ import {
 } from "lucide-react";
 import Button from "../utils/button";
 import { AnimatePresence, motion } from "framer-motion";
-
+import { title } from "../sidebar/calendar";
 
 type Task = {
     id: number;
+    sectionId?: number;
     name: string;
     description?: string;
     links?: string[];
@@ -22,11 +23,18 @@ type Task = {
     parentTask?: Task;
 }
 
-type List = {
-    tasks: Task[]
+type Section = {
+    id: number;
+    name: string;
+    description?: string;
 }
 
-// NEXT TO FINISH: Remove "next", "for", etc.
+
+type List = {
+    tasks: Task[];
+    sections: Section[];
+}
+
 // add more information to the row e.g. due date
 // add priorities to nlu
 
@@ -241,12 +249,12 @@ export default function List({ tab }: { tab: Tab; }) {
 
     const [listInfo, setListInfo] = useState<List>(() => {
         const data = localStorage.getItem(`list-${tab.locatorId}`);
-        if (!data) { localStorage.setItem(`list-${tab.locatorId}`, JSON.stringify({ values: { tasks: [] } })); return []; };
+        if (!data) { localStorage.setItem(`list-${tab.locatorId}`, JSON.stringify({ values: { tasks: [], sections: [] } })); return []; };
 
         return JSON.parse(data).values;
     });
 
-    const [editing, setEditing] = useState<number | false>(false);
+    const [editing, setEditing] = useState<{ type: string; id: number } | false>(false);
     const [initLoad, setInitLoad] = useState<boolean>(true);
 
     useEffect(() => {
@@ -279,13 +287,30 @@ export default function List({ tab }: { tab: Tab; }) {
             (oTask) => !listInfo.tasks.some((task) => task.id === oTask.id)
         );
         
-        if (diff.length === 0 && !del) return;
+
+        const diffSects = data.sections.filter((section: Section) => {
+            const oSect = orig.values.sections.find((o) => o.id === section.id);
+            if (!oSect) return true;
+
+            if (section.name === "Untitled") return false;
+
+
+            return Object.keys(section).some(
+                (key) => section[key as keyof Section] !== oSect[key as keyof Section]
+            );
+        });
+
+        const delSects = orig.values.sections.some(
+            (oSect) => !listInfo.sections.some((section) => section.id === oSect.id)
+        );
+        
+        if (diff.length === 0 && !del && diffSects.length === 0 && !delSects) return;
 
         return localStorage.setItem(`list-${tab.locatorId}`, JSON.stringify({ values: listInfo }));
     }, [listInfo, tab.locatorId]);
 
     const newTask = () => {
-        const l = { tasks: [...listInfo.tasks] } as List;
+        const l = { tasks: [...listInfo.tasks], sections: [...listInfo.sections] } as List;
         const nid = listInfo.tasks.reduce((max, task) => { return Math.max(max, task.id); }, 0) + 1 as number;
         l.tasks.push(
             {
@@ -294,7 +319,7 @@ export default function List({ tab }: { tab: Tab; }) {
             }
         );
         setListInfo(l);
-        setEditing(nid);
+        setEditing({ type: "task", id: nid });
 
         setTimeout(() => {
             const form = document.getElementById(`form-${nid}`);
@@ -311,10 +336,38 @@ export default function List({ tab }: { tab: Tab; }) {
     };
 
     const changeName = (e: React.SubmitEvent<HTMLFormElement> | any) => {
+        e.preventDefault();
+
+
+        // section change name
+        if (e.currentTarget.id.includes("section")) {
+            const id = parseInt(e.currentTarget.id.split("-")[2]);
+
+            const section = listInfo.sections.filter((section) => section.id === id);
+
+            const formData = new FormData(e.currentTarget);
+            const name = formData.get("newName") as string;
+
+            if (!name || name.trim() === "" || name.trim() === "Untitled") {
+                const newl = listInfo.sections.filter((section) => section.id !== id);
+                setEditing(false);
+                return setListInfo({ tasks: [...listInfo.tasks], sections: [...newl] });
+            }
+
+            const nSect = { ...section[0] } as Section;
+            nSect.name = name;
+
+            const nl = [...listInfo.sections];
+            nl.splice(listInfo.sections.findIndex((section) => section.id === id), 1, nSect);
+            
+            setListInfo({ tasks: [...listInfo.tasks], sections: nl });
+            return setEditing(false);
+        }
+        
+        // task change name
         const id = parseInt(e.currentTarget.id.split("-")[1]);
 
         const task = listInfo.tasks.filter((task) => task.id === id);
-        if (task.length === 0) return;
         
         const formData = new FormData(e.currentTarget);
         const newName = formData.get("newName") as string;
@@ -322,30 +375,57 @@ export default function List({ tab }: { tab: Tab; }) {
         if (!newName || newName.trim() === "" || newName.trim() === "Untitled") {
             const newl = listInfo.tasks.filter((task) => task.id !== id);
             setEditing(false);
-            return setListInfo({ tasks: newl });
+            return setListInfo({ tasks: newl, sections: [...listInfo.sections] });
         };
+        
 
         const nTask = { ...task[0] } as Task;
         nTask.name = newName;
 
+            
         const calcd = nlu(newName);
         if (calcd) {
             nTask.due = calcd.date!;
             nTask.name = calcd.cleanedTitle;
         }
 
+        
+        
         const newl = [...listInfo.tasks]
         newl.splice(listInfo.tasks.findIndex((task) => task.id === id), 1, nTask);
         
 
-        setListInfo({ tasks: newl });
+        setListInfo({ tasks: newl, sections: [...listInfo.sections] });
         return setEditing(false);
     };
 
     const removeTask = (id: number) => {
         const ls = listInfo.tasks.filter((t) => t.id !== id);
-        setListInfo({ tasks: ls });
+        setListInfo({ tasks: ls, sections: [...listInfo.sections] });
         return;
+    }
+
+
+    const addSection = (e: React.MouseEvent) => {
+        const nid = listInfo.sections.reduce((max, task) => { return Math.max(max, task.id); }, 0) + 1 as number;
+        const ls = { tasks: [...listInfo.tasks], sections: [...listInfo.sections] } as List;
+
+        ls.sections.push({
+            id: nid,
+            name: "Untitled"
+        });
+
+        setListInfo(ls);
+        setEditing({ type: "section", id: nid });
+
+        setTimeout(() => {
+            const form = document.getElementById(`form-section-${nid}`);
+            if (!form) return;
+            const input = form.children[0] as HTMLInputElement;
+            input.focus();
+            input.select();
+            return;
+        }, 50)
     }
 
     return (
@@ -357,41 +437,55 @@ export default function List({ tab }: { tab: Tab; }) {
                     New Task
                 </p>
             </Button>
-            {
-                listInfo.tasks.length > 0 ? 
-                    (
-                        <AnimatePresence>
+            <div>
+                <AnimatePresence>
+                    <p className="text-gray-600 font-semibold mb-1">Uncategorised</p>
+                    {
+                        listInfo.tasks.map((task, index) => 
+                            !task.sectionId ? <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} initLoad={initLoad} />
+                            : null
+                        ) ?? <div className="flex flex-col">
+                                <div className="flex flex-col w-full mt-8 items-center justify-center">
+                                    
+                                    <BadgeAlert className="w-10 h-10 text-gray-500/60" />
+                                    <p className="text-base font-semibold text-gray-500/60">No outstanding tasks</p>
+                                </div>
+                            </div>
+                    }
+                </AnimatePresence>
+                {
+                    listInfo.sections && listInfo.sections.map((section) =>
+                        <div key={`section-${section.id}`}> 
+                            { editing && editing.type === "section" && editing.id === section.id ? 
+                                <form className="flex flex-row items-center" id={`form-section-${section.id}`} onSubmit={ changeName } onBlur={ changeName } >
+                                    <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" spellCheck={false} defaultValue={section.name} name="newName" type="text" autoComplete="off" />
+                                </form>
+                            : <p className="text-gray-600 font-semibold mb-1">{ title(section.name) }</p> }
                             {
                                 listInfo.tasks.map((task, index) => 
-                                    <motion.div key={`task-${task.id}`} initial={{ translateX: -5, opacity: 0 }} animate={{ translateX: 0, opacity: 100, transition: { duration: 0.2, delay: initLoad ? (index)*0.1 : 0 } }} exit={{ translateX: -10, opacity: 0, transition: { delay: 0, duration: 0.2 } }}  className="group mb-2 transition-x transition-translate-x transition-translate-y">
-                                        <Button name={ task.name } className="flex flex-row gap-2 items-center justify-start">
-                                            <div className="flex flex-row relative items-center justify-center w-fit h-fit">
-                                                <Circle className="flex flex-row items-center justify-center text-gray-600/40 w-4 h-4" />
-                                                <Check className="text-gray-600/40 w-3 h-3 absolute opacity-0 group-hover:opacity-100 transition-all duration-200" />
-                                                <div className="absolute w-full h-full p-4" onClick={ () => { removeTask(task.id); } } />
-                                            </div>
-                                            {
-                                                editing && editing === task.id ? 
-                                                (
-                                                    <form onClick={(e) => { e.preventDefault(); }} className="flex flex-row items-center" id={`form-${task.id}`} onSubmit={ changeName } onBlur={ changeName } >
-                                                        <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" placeholder={`List name [${tab.title}]...`} spellCheck={false} defaultValue={task.name} name="newName" type="text" autoComplete="off" />
-                                                    </form>
-                                                )
-                                                : <p className="text-gray-600 text-sm">{ task.name }</p>
-                                            }
-                                        </Button>
-                                    </motion.div>
-                                )
+                                    task.sectionId && task.sectionId === section.id ? <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} initLoad={initLoad} />
+                                    : null
+                                ) ?? <div className="flex flex-col">
+                                        <div className="flex flex-col w-full mt-8 items-center justify-center">
+                                            
+                                            <BadgeAlert className="w-10 h-10 text-gray-500/60" />
+                                            <p className="text-base font-semibold text-gray-500/60">No outstanding tasks</p>
+                                        </div>
+                                    </div>
                             }
-                        </AnimatePresence>
+                        </div>
                     )
-                : (
-                    <div className="flex flex-col w-full mt-8 items-center justify-center">
-                        <BadgeAlert className="w-10 h-10 text-gray-500/60" />
-                        <p className="text-base font-semibold text-gray-500/60">No outstanding tasks</p>
+                }
+            </div>
+
+            <div className="py-2 mt-4 group hover:cursor-pointer select-none" onClick={addSection}>
+                <div className="flex flex-row items-center justify-center h-0.5 w-full bg-gray-400/10 group-hover:bg-gray-400/40">
+                    <div className="flex flex-row gap-1 items-center justify-center bg-white px-2">
+                        <PlusCircle className="text-gray-600 w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                        <p className="text-gray-600/80 text-sm -mt-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-200">Section Divider</p>
                     </div>
-                )
-            }
+                </div>
+            </div>
         </div>
     );
 };
