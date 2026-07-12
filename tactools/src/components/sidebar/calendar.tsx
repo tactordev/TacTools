@@ -8,7 +8,7 @@ import { Tab } from "../../main";
 import { createPortal } from "react-dom";
 
 function title(value: string) {
-    return [value.slice(0, 1).toUpperCase(), value.slice(1, value.length).toLowerCase()].join("");
+    return [value.slice(0, 1).toUpperCase(), value.slice(1, value.length)].join("");
 }
 
 
