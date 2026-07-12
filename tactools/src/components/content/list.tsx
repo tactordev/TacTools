@@ -26,6 +26,10 @@ type List = {
     tasks: Task[]
 }
 
+// NEXT TO FINISH: Remove "next", "for", etc.
+// add more information to the row e.g. due date
+// add priorities to nlu
+
 function nlu(text: string) {
 
     // # ---- DUE DATES ---- # \\
@@ -168,10 +172,13 @@ function nlu(text: string) {
             const prev = words[count - 1] || "";
             if (prev === "next") {
                 diff += 7;
+                indexes.add(count - 1);
             } else if (prev === "last") {
                 diff -= 7;
+                indexes.add(count - 1);
             } else if (diff <= 0) {
                 diff += 7;
+                indexes.add(count - 1);
             }
             target.setDate(target.getDate() + diff);
             continue;
