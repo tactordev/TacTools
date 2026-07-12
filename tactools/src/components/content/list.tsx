@@ -241,7 +241,10 @@ function nlu(text: string) {
 
 };
 
-
+function max(one: any, two: any) {
+    if (one.filter((n: any) => n).length > 0) return one;
+    return two;
+}
 function Task(
     {
         task,
@@ -481,37 +484,39 @@ export default function List({ tab }: { tab: Tab; }) {
                 <AnimatePresence>
                     <p className="text-gray-600 font-semibold mb-1">Uncategorised</p>
                     {
-                        listInfo.tasks.map((task, index) => 
+                        max (listInfo.tasks.map((task, index) => 
                             !task.sectionId ? <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} initLoad={initLoad} />
                             : null
-                        ) ?? <div className="flex flex-col">
-                                <div className="flex flex-col w-full mt-8 items-center justify-center">
+                        ), <div className="flex flex-col">
+                                <div className="flex flex-col w-full items-center justify-center">
                                     
                                     <BadgeAlert className="w-10 h-10 text-gray-500/60" />
                                     <p className="text-base font-semibold text-gray-500/60">No outstanding tasks</p>
                                 </div>
                             </div>
+                        )
                     }
                 </AnimatePresence>
                 {
                     listInfo.sections && listInfo.sections.map((section) =>
-                        <div key={`section-${section.id}`}> 
+                        <div className="mt-8" key={`section-${section.id}`}> 
                             { editing && editing.type === "section" && editing.id === section.id ? 
                                 <form className="flex flex-row items-center" id={`form-section-${section.id}`} onSubmit={ changeName } onBlur={ changeName } >
                                     <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" spellCheck={false} defaultValue={section.name} name="newName" type="text" autoComplete="off" />
                                 </form>
                             : <p className="text-gray-600 font-semibold mb-1">{ title(section.name) }</p> }
                             {
-                                listInfo.tasks.map((task, index) => 
+                                max(listInfo.tasks.map((task, index) => 
                                     task.sectionId && task.sectionId === section.id ? <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} initLoad={initLoad} />
                                     : null
-                                ) ?? <div className="flex flex-col">
+                                ),  <div className="flex flex-col">
                                         <div className="flex flex-col w-full mt-8 items-center justify-center">
                                             
                                             <BadgeAlert className="w-10 h-10 text-gray-500/60" />
                                             <p className="text-base font-semibold text-gray-500/60">No outstanding tasks</p>
                                         </div>
                                     </div>
+                                )
                             }
                         </div>
                     )
