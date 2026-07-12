@@ -1,7 +1,7 @@
 "use client";
 
-import { Tab, FileTabVal } from "../../main";
-import { useEffect, useRef, useState } from "react";
+import { Tab } from "../../main";
+import { useEffect, useRef } from "react";
 import Button from "../utils/button";
 import {
     Folder,
@@ -20,8 +20,6 @@ import { readFile, writeFile } from "@tauri-apps/plugin-fs";
 
 
 function MDEditor({ tab }: { tab: Tab }) {
-    const [content, setContent] = useState<string>("Begin writing...");
-
     const h1 = Decoration.line({ attributes: { class: "text-xl font-extrabold block my-2" } });
     const h2 = Decoration.line({ attributes: { class: "text-lg font-bold block my-1.5" } });
     const h3 = Decoration.line({ attributes: { class: "text-base font-semibold block my-1" } });
@@ -134,7 +132,6 @@ function MDEditor({ tab }: { tab: Tab }) {
                 });
 
                 const docText = state.doc.toString();
-                const mathRegex = /\$\$([\s\S]*?)\$\_/g; 
                 const blockMathRegex = /\$\$([\s\S]*?)\$\$/g;
                 let match;
 
@@ -210,8 +207,6 @@ function MDEditor({ tab }: { tab: Tab }) {
                 const textContent = new TextDecoder().decode(data);
 
                 if (!isMounted) return;
-
-                setContent(textContent);
 
                 const starter = EditorState.create({
                     doc: textContent,

@@ -4,7 +4,7 @@ import { Tab } from "../../main";
 import File from "./file";
 import List from "./list";
 
-export default function Content({ tabs, setTabs }: { tabs: Tab[]; setTabs: (_: Tab[]) => void; }) {
+export default function Content({ tabs }: { tabs: Tab[]; setTabs: (_: Tab[]) => void; }) {
 
     const activeTab = tabs.filter((tab) => tab.active === true)[0];
 

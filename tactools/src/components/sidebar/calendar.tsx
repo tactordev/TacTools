@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "motion/react";
 import Button from "../utils/button";
 import { Hash, Plus, Inbox, Edit, Trash2 } from "lucide-react";
 import { Tab } from "../../main";
-import { createPortal } from "react-dom";
 import ContextMenu from "../utils/context-menu";
 
 
@@ -41,7 +40,7 @@ function CTXMenu(
 
 
     return (
-        <ContextMenu x={x} y={y} id={id} onBlur={onBlur}>
+        <ContextMenu x={x} y={y} onBlur={onBlur}>
             <Button onClick={(e: React.MouseEvent) => { edit(e, id); }} name="Rename"  className="flex flex-row items-center justify-start gap-3 !shadow-none select-none">
                 <Edit className="w-4 h-4 text-gray-600" />
                 <p className="text-gray-600 text-sm">Rename</p>

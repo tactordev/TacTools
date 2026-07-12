@@ -74,7 +74,7 @@ function nlu(text: string) {
     const indexes = new Set<number>();
 
     const days: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
-    const months: Record<string, number> = { jan: 0 , feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    // const months: Record<string, number> = { jan: 0 , feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
     const timeframes: Record<string, string> = {
         year: 'year', month: 'month', week: 'week', fortnight: 'fortnight', day: 'day', hour: 'hour', minute: 'minute', second: 'second'
     };
@@ -284,7 +284,7 @@ export default function List({ tab }: { tab: Tab; }) {
         return localStorage.setItem(`list-${tab.locatorId}`, JSON.stringify({ values: listInfo }));
     }, [listInfo, tab.locatorId]);
 
-    const newTask = (e: React.MouseEvent) => {
+    const newTask = () => {
         const l = { tasks: [...listInfo.tasks] } as List;
         const nid = listInfo.tasks.reduce((max, task) => { return Math.max(max, task.id); }, 0) + 1 as number;
         l.tasks.push(
