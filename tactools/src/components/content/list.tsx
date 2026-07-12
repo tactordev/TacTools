@@ -241,6 +241,46 @@ function nlu(text: string) {
 
 };
 
+
+function Task(
+    {
+        task,
+        index,
+        editing,
+        removeTask,
+        changeName,
+        initLoad
+    }: {
+        task: Task;
+        index: number;
+        editing: { type: string; id: number; } | false;
+        removeTask: (id: number ) => void;
+        changeName: (e: React.SubmitEvent<HTMLFormElement> | any) => void;
+        initLoad: boolean;
+    }
+) {
+    return (
+        <motion.div key={`task-${task.id}`} initial={{ translateX: -5, opacity: 0 }} animate={{ translateX: 0, opacity: 100, transition: { duration: 0.2, delay: initLoad ? (index)*0.1 : 0 } }} exit={{ translateX: -10, opacity: 0, transition: { delay: 0, duration: 0.2 } }}  className="group mb-2 transition-x transition-translate-x transition-translate-y">
+            <Button name={ task.name } className="flex flex-row gap-2 items-center justify-start">
+                <div className="flex flex-row relative items-center justify-center w-fit h-fit">
+                    <Circle className="flex flex-row items-center justify-center text-gray-600/40 w-4 h-4" />
+                    <Check className="text-gray-600/40 w-3 h-3 absolute opacity-0 group-hover:opacity-100 transition-all duration-200" />
+                    <div className="absolute w-full h-full p-4" onClick={ () => { removeTask(task.id); } } />
+                </div>
+                {
+                    editing && editing.type === "task" && editing.id === task.id ? 
+                    (
+                        <form onClick={(e) => { e.preventDefault(); }} className="flex flex-row items-center" id={`form-${task.id}`} onSubmit={ changeName } onBlur={ changeName } >
+                            <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" spellCheck={false} defaultValue={task.name} name="newName" type="text" autoComplete="off" />
+                        </form>
+                    )
+                    : <p className="text-gray-600 text-sm">{ task.name }</p>
+                }
+            </Button>
+        </motion.div>  
+    );
+}
+
 export default function List({ tab }: { tab: Tab; }) {
     if (
         tab.title === "Overview"
