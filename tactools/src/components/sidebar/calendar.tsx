@@ -206,7 +206,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
                                             {
                                                 editing === index ? (
                                                     <form onClick={(e) => { e.preventDefault(); }} className="flex flex-row items-center" id={`${value.id}`} onSubmit={ changeName } onBlur={ changeName } >
-                                                        <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" placeholder={`List name [${value}]...`} spellCheck={false} defaultValue={value.name} name="newName" type="text" autoComplete="off" />
+                                                        <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" placeholder={`List name...`} spellCheck={false} defaultValue={value.name} name="newName" type="text" autoComplete="off" />
                                                     </form>
                                                 ) : (
                                                     <p className="text-sm text-gray-600 select-none my-0.5">

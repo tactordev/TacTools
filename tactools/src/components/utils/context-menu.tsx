@@ -1,19 +1,17 @@
 "use client";
 import { createPortal } from "react-dom";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { motion } from "motion/react";
 
 export default function ContextMenu(
     {
         x,
         y,
-        id,
         onBlur,
         children
     }: {
         x: number;
         y: number;
-        id: number;
         onBlur: () => void;
         children: React.ReactNode;
     }

@@ -3,12 +3,12 @@ import { useRef } from "react";
 
 
 
-export default function Button({ children, className, name, onClick }: { children?: React.ReactNode; className?: string; name?: string; onClick?: (e: React.MouseEvent) => void; }) {
+export default function Button({ children, className, name, onClick, disableMovement }: { children?: React.ReactNode; className?: string; name?: string; onClick?: (e: React.MouseEvent) => void; disableMovement?: boolean }) {
     const foo = () => { return true; }
     const button = useRef<HTMLDivElement | null>(null);
 
     const handleMouseDown = () => {
-        if (!button) return false;
+        if (!button || disableMovement) return false;
 
         if (!button.current?.classList.contains("scale-95")) {
             button.current?.classList.remove("hover:scale-105");
@@ -21,7 +21,7 @@ export default function Button({ children, className, name, onClick }: { childre
 
 
     const handleMouseLeave = () => {
-        if (!button) return false;
+        if (!button || disableMovement) return false;
 
         if (button.current?.classList.contains("scale-95")) {
             button.current?.classList.remove("scale-95");
@@ -33,7 +33,7 @@ export default function Button({ children, className, name, onClick }: { childre
     }
 
     const handleMouseUp = () => {
-        if (!button) return false;
+        if (!button || disableMovement) return false;
 
         if (button.current?.classList.contains("scale-95")) {
             button.current?.classList.remove("scale-95");

@@ -1,20 +1,23 @@
 "use client";
 import { Tab } from "../../main";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
     PlusCircle,
     BadgeAlert,
     Circle,
-    Check
+    Check,
+    GripVertical,
+    Pointer
 } from "lucide-react";
 import Button from "../utils/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { title } from "../sidebar/calendar";
+import { currentMonitor } from "@tauri-apps/api/window";
 
 type Task = {
     id: number;
-    sectionId?: number;
     name: string;
+    sectionId: number | null;
     description?: string;
     links?: string[];
     recurring?: Date;
@@ -26,6 +29,7 @@ type Task = {
 type Section = {
     id: number;
     name: string;
+    tasks: Task[];
     description?: string;
 }
 
@@ -252,7 +256,9 @@ function Task(
         editing,
         removeTask,
         changeName,
-        initLoad
+        initLoad,
+        setListInfo,
+        listInfo
     }: {
         task: Task;
         index: number;
@@ -260,12 +266,166 @@ function Task(
         removeTask: (id: number ) => void;
         changeName: (e: React.SubmitEvent<HTMLFormElement> | any) => void;
         initLoad: boolean;
+        setListInfo: (listInfo: List) => void;
+        listInfo: List;
     }
 ) {
+    const [dragging, setDragging] = useState<boolean>(false);
+    const [pos, setPos] = useState<{ x: number; y: number; }>({ x: 0, y: 0 });
+    const [offset, setOffset] = useState<{ x: number; y: number; }>({ x: 0, y: 0 });
+    
+    const closest = useRef<HTMLElement | null>(null);
+    const drag = useRef<HTMLDivElement | null>(null);
+
+    const pointerDown = (e: React.PointerEvent) => {
+        setDragging(true);
+        const rect = drag.current!.getBoundingClientRect();
+        setOffset({
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        });
+
+
+        window.addEventListener('pointermove', pointerMove);
+        window.addEventListener('pointerup', pointerUp);
+    };
+
+    const getAllDivs = () => {
+        const sectionIds = listInfo.sections.map((section) => { return section.id });
+        const taskIds = listInfo.tasks.map((task) => { return task.id });
+        const sectTaskIds = listInfo.sections.map((section) => { return section.tasks.map((task) => task.id ); });
+        
+        const sectionDivs = sectionIds.map((id) => { const el = document.getElementById(`sectiondiv-${id}`); el?.classList.remove("!bg-blue-100/40", "closest"); return el; });
+        const taskDivs = taskIds.map((id) => { const el = document.getElementById(`taskdiv-${id}`); el?.classList.remove("!opacity-100", "closest"); return el; });
+        const secTaskDivs = sectTaskIds.map((id) => { const el = document.getElementById(`sectiontaskid-${id}`); el?.classList.remove("!opacity-100", "closest"); return el; });
+
+        return [...sectionDivs, ...taskDivs, ...secTaskDivs];
+    }
+
+    const pointerMove = (e: PointerEvent) => {
+        setPos({
+            x: e.clientX - offset.x,
+            y: e.clientY - offset.y
+        });
+
+        const allDivs = getAllDivs(); 
+
+        const distances: { id: string; distance: number; }[] = [];
+        allDivs.forEach((val) => {
+            if (!val) return;
+            const valRect = val.getBoundingClientRect();
+            const dist = Math.sqrt(Math.pow((valRect.x - e.clientX), 2) + Math.pow((valRect.y - e.clientY), 2));
+            return distances.push({ id: val.id, distance: dist });
+        });
+
+        const shortestDist = distances.reduce((min, task) => { return Math.min(min, task.distance) }, 100000);
+
+        if (shortestDist === 0) return;
+
+        const shortestDistVal = distances.find((value) => value.distance === shortestDist);
+        if (!shortestDistVal) return;
+
+        const el = document.getElementById(`${shortestDistVal.id}`);
+        if (!el) return;
+        
+        if (shortestDistVal.id.includes("taskdiv")) { el?.classList.add("!opacity-100", "closest"); } else { el?.classList.add("!bg-blue-100/40", "closest"); }
+        return closest.current = el;
+    };
+
+    const pointerUp = () => {
+        setDragging(false);
+
+        const divs = getAllDivs();
+
+        let ls = { sections: [...listInfo.sections], tasks: [...listInfo.tasks]};
+        if (closest.current) {
+            const id = parseInt(closest.current.id.split("-")[1]);
+            
+            if (closest.current.id.includes("sectiontaskdiv")) {
+                let curIndex = 0;
+
+                if (task.sectionId) {
+                    const curSectionIndex = ls.sections.findIndex((s) => s.id === task.sectionId);
+                    curIndex = ls.sections[curSectionIndex].tasks.findIndex((t) => t.id === task.id);
+                } else {
+                    curIndex = ls.tasks.findIndex((t) => t.id === task.id);
+                }
+                ls.tasks.splice(curIndex, 1);
+                const sectionId = parseInt(closest.current.parentElement!.parentElement!.id.split("-")[1]);
+                const sectionIndex = ls.sections.findIndex((s) => s.id === sectionId);
+                ls.sections[sectionIndex].tasks.splice(ls.sections[sectionIndex].tasks.length - 1, 0, { ...task, sectionId: sectionId });
+                if (task.sectionId) {
+                    const curSectionId = ls.sections.findIndex((s) => s.id === task.sectionId);
+                    ls.sections[curSectionId].tasks.splice(curIndex, 1);
+                } else {
+                    ls.tasks.splice(curIndex, 1);
+                }
+
+
+            } else if (closest.current.id.includes("taskdiv")) {
+                let curIndex = 0;
+                if (task.sectionId) {
+                    const curSectIndex = ls.sections.findIndex((s) => s.id === task.sectionId);
+                    curIndex = ls.sections[curSectIndex].tasks.findIndex((t) => t.id === task.id);
+                    ls.sections[curSectIndex].tasks.splice(curIndex, 1);
+                } else {
+                    curIndex = ls.tasks.findIndex((t) => t.id === task.id);
+                    ls.tasks.splice(curIndex, 1);
+                }
+                ls.tasks.splice(id, 0, { ...task, sectionId: null });
+            } else {
+                if (task.sectionId) {
+                    const curSectionIndex = ls.sections.findIndex((s) => s.id === task.sectionId);
+                    const curIndex = ls.sections[curSectionIndex].tasks.findIndex((t) => t.id === task.id);
+                    ls.sections[curSectionIndex].tasks.splice(curIndex, 1);
+                } else {
+                    const curIndex = ls.tasks.findIndex((t) => t.id === task.id);
+                    ls.tasks.splice(curIndex, 1);
+                }
+
+                const newSectionIndex = ls.sections.findIndex((s) => s.id === id);
+                ls.sections[newSectionIndex].tasks.splice(ls.sections[newSectionIndex].tasks.length - 1, 1, { ...task, sectionId: id });
+            }
+        }
+        console.log(closest.current);
+
+        window.removeEventListener('pointermove', pointerMove);
+        window.removeEventListener('pointerup', pointerUp);
+
+        closest.current = null;
+        setListInfo(ls);
+        console.log(listInfo);
+    }
+
+
+
     return (
-        <motion.div key={`task-${task.id}`} initial={{ translateX: -5, opacity: 0 }} animate={{ translateX: 0, opacity: 100, transition: { duration: 0.2, delay: initLoad ? (index)*0.1 : 0 } }} exit={{ translateX: -10, opacity: 0, transition: { delay: 0, duration: 0.2 } }}  className="group mb-2 transition-x transition-translate-x transition-translate-y">
-            <Button name={ task.name } className="flex flex-row gap-2 items-center justify-start">
-                <div className="flex flex-row relative items-center justify-center w-fit h-fit">
+        <motion.div
+            layout
+            key={task.id}
+            initial={{ translateX: -5, opacity: 0 }}
+            animate={{ translateX: 0, opacity: 100, transition: { duration: 0.2, delay: initLoad ? (index)*0.1 : 0 } }}
+            exit={{ translateX: -10, opacity: 0, transition: { delay: 0, duration: 0.2 } }}
+            
+            style={{
+                position: dragging ? 'fixed' : 'relative',
+                left: dragging ? pos.x : 'auto',
+                top: dragging ? pos.y : 'auto',
+                zIndex: dragging ? 1000 : 1,
+                userSelect: 'none'
+            }}
+            className={`group flex flex-row w-96 mb-2 ${dragging ? "rotate-5 cursor-grabbing" : ""} transition-transform duration-200`}
+        >
+            <Button disableMovement={true} name={ task.name } className="flex flex-row w-full gap-2 items-center justify-start">
+                <div
+                
+                    ref={drag}
+                    onPointerDown={pointerDown}
+                    className="absolute flex z-200 left-0 hover:cursor-move h-full items-center justify-center"
+                >
+                    <GripVertical className="text-gray-600/40 w-4 h-4 px-0 mx-0 select-none pointer-events-none" />
+                </div>
+                <div  className="ml-2 flex flex-row relative items-center justify-center w-fit h-fit">
                     <Circle className="flex flex-row items-center justify-center text-gray-600/40 w-4 h-4" />
                     <Check className="text-gray-600/40 w-3 h-3 absolute opacity-0 group-hover:opacity-100 transition-all duration-200" />
                     <div className="absolute w-full h-full p-4" onClick={ () => { removeTask(task.id); } } />
@@ -292,7 +452,7 @@ export default function List({ tab }: { tab: Tab; }) {
 
     const [listInfo, setListInfo] = useState<List>(() => {
         const data = localStorage.getItem(`list-${tab.locatorId}`);
-        if (!data) { localStorage.setItem(`list-${tab.locatorId}`, JSON.stringify({ values: { tasks: [], sections: [] } })); return []; };
+        if (!data) { localStorage.setItem(`list-${tab.locatorId}`, JSON.stringify({ values: { tasks: [], sections: [] } })); return { tasks: [], sections: [] }; };
 
         return JSON.parse(data).values;
     });
@@ -314,40 +474,47 @@ export default function List({ tab }: { tab: Tab; }) {
         if (!orig?.values?.tasks) return;
 
 
-        const diff = data.tasks.filter((task: Task) => {
-            const oTask = orig.values.tasks.find((o) => o.id === task.id);
-            if (!oTask) return true;
+        let diffd = false;
+
+        try {
+            let count = 0;
+            for (const task of data.tasks) {
+                const oTask = orig.values.tasks[count];
+                for (const key of Object.keys(task)) {
+                    if (task[key as keyof Task] === oTask[key as keyof Task]) {
+                        continue;
+                    }
+
+                    diffd = true;
+                    break;
+                }
+
+                if (diffd) break;
+                
+                count++;
+            }
+
+            count = 0;
+            for (const section of data.sections) {
+                const oSect = orig.values.sections[count];
+                for (const key of Object.keys(section)) {
+                    if (section[key as keyof Section] === oSect[key as keyof Section]) {
+                        continue;
+                    }
+
+                    diffd = true;
+                    break;
+                }
+
+                if (diffd) break;
+                continue;
+            }
+        } catch(err) { 
+            diffd = true;
+        }
 
 
-            if (task.name === "Untitled") return false;
-
-            return Object.keys(task).some(
-                (key) => task[key as keyof Task] !== oTask[key as keyof Task]
-            );
-        });
-
-        const del = orig.values.tasks.some(
-            (oTask) => !listInfo.tasks.some((task) => task.id === oTask.id)
-        );
-        
-
-        const diffSects = data.sections.filter((section: Section) => {
-            const oSect = orig.values.sections.find((o) => o.id === section.id);
-            if (!oSect) return true;
-
-            if (section.name === "Untitled") return false;
-
-
-            return Object.keys(section).some(
-                (key) => section[key as keyof Section] !== oSect[key as keyof Section]
-            );
-        });
-
-        const delSects = orig.values.sections.some(
-            (oSect) => !listInfo.sections.some((section) => section.id === oSect.id)
-        );
-        
-        if (diff.length === 0 && !del && diffSects.length === 0 && !delSects) return;
+        if (!diffd) return;
 
         return localStorage.setItem(`list-${tab.locatorId}`, JSON.stringify({ values: listInfo }));
     }, [listInfo, tab.locatorId]);
@@ -359,6 +526,7 @@ export default function List({ tab }: { tab: Tab; }) {
             {
                 id: nid,
                 name: "Untitled",
+                sectionId: null
             }
         );
         setListInfo(l);
@@ -382,7 +550,6 @@ export default function List({ tab }: { tab: Tab; }) {
         e.preventDefault();
 
 
-        // section change name
         if (e.currentTarget.id.includes("section")) {
             const id = parseInt(e.currentTarget.id.split("-")[2]);
 
@@ -407,7 +574,6 @@ export default function List({ tab }: { tab: Tab; }) {
             return setEditing(false);
         }
         
-        // task change name
         const id = parseInt(e.currentTarget.id.split("-")[1]);
 
         const task = listInfo.tasks.filter((task) => task.id === id);
@@ -455,7 +621,8 @@ export default function List({ tab }: { tab: Tab; }) {
 
         ls.sections.push({
             id: nid,
-            name: "Untitled"
+            name: "Untitled",
+            tasks: []
         });
 
         setListInfo(ls);
@@ -480,36 +647,47 @@ export default function List({ tab }: { tab: Tab; }) {
                     New Task
                 </p>
             </Button>
-            <div>
+            <div className="flex flex-col w-96 px-4">
+                <p className="text-gray-600 font-semibold mb-1">Uncategorised</p>
+                
+                
+                <div id={`taskdiv-0`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
                 <AnimatePresence>
-                    <p className="text-gray-600 font-semibold mb-1">Uncategorised</p>
-                    {
-                        max (listInfo.tasks.map((task, index) => 
-                            !task.sectionId ? <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} initLoad={initLoad} />
-                            : null
-                        ), <div className="flex flex-col">
-                                <div className="flex flex-col w-full items-center justify-center">
-                                    
-                                    <BadgeAlert className="w-10 h-10 text-gray-500/60" />
-                                    <p className="text-base font-semibold text-gray-500/60">No outstanding tasks</p>
+                        {
+                        listInfo.tasks && max (
+                            listInfo.tasks.map((task, index) => 
+                                <div key={`task-${task.id}`} className="flex flex-col items-center justify-center w-full h-full">
+                                    <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} setListInfo={setListInfo} listInfo={listInfo} initLoad={initLoad} />
+                                    <div id={`taskdiv-${task.id}`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
                                 </div>
+                            )
+                        , <div key={`uncategorised-empty`} className="flex flex-col">
+                            <div className="flex flex-col w-full items-center justify-center">
+                                <BadgeAlert className="w-10 h-10 text-gray-500/60" />
+                                <p className="text-base font-semibold text-gray-500/60">No outstanding tasks</p>
                             </div>
+                          </div>
                         )
                     }
                 </AnimatePresence>
+                
                 {
                     listInfo.sections && listInfo.sections.map((section) =>
-                        <div className="mt-8" key={`section-${section.id}`}> 
+                        <div  className="w-96 mt-8 pb-8 px-4 -ml-4 py-2 rounded-md" key={`sectiondiv-${section.id}`} id={`sectiondiv-${section.id}`}> 
+                        
+                            <div key={`sectiontaskdiv-0`} id={`sectiontaskdiv-0`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
                             { editing && editing.type === "section" && editing.id === section.id ? 
                                 <form className="flex flex-row items-center" id={`form-section-${section.id}`} onSubmit={ changeName } onBlur={ changeName } >
                                     <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" spellCheck={false} defaultValue={section.name} name="newName" type="text" autoComplete="off" />
                                 </form>
                             : <p className="text-gray-600 font-semibold mb-1">{ title(section.name) }</p> }
                             {
-                                max(listInfo.tasks.map((task, index) => 
-                                    task.sectionId && task.sectionId === section.id ? <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} initLoad={initLoad} />
-                                    : null
-                                ),  <div className="flex flex-col">
+                                max(section.tasks.map((task, index) => 
+                                        <div key={`task-${task.id}`}>
+                                            <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} setListInfo={setListInfo} listInfo={listInfo} initLoad={initLoad} />
+                                            <div id={`sectiontaskdiv-${task.id}`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
+                                        </div>
+                                ),  <div key={`${section.id}-empty`} className="flex flex-col">
                                         <div className="flex flex-col w-full mt-8 items-center justify-center">
                                             
                                             <BadgeAlert className="w-10 h-10 text-gray-500/60" />
@@ -524,10 +702,10 @@ export default function List({ tab }: { tab: Tab; }) {
             </div>
 
             <div className="py-2 mt-4 group hover:cursor-pointer select-none" onClick={addSection}>
-                <div className="flex flex-row items-center justify-center h-0.5 w-full bg-gray-400/10 group-hover:bg-gray-400/40">
+                <div className="flex flex-row items-center justify-center h-0.5 w-full bg-gray-400/10 group-hover:bg-blue-400/40">
                     <div className="flex flex-row gap-1 items-center justify-center bg-white px-2">
-                        <PlusCircle className="text-gray-600 w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                        <p className="text-gray-600/80 text-sm -mt-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-200">Section Divider</p>
+                        <PlusCircle className="text-blue-400 w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                        <p className="text-blue-400/80 text-sm -mt-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-200">Section Divider</p>
                     </div>
                 </div>
             </div>
