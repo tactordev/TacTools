@@ -14,7 +14,7 @@ export default function Content({ tabs }: { tabs: Tab[]; setTabs: (_: Tab[]) => 
             {
                 activeTab && (
                     activeTab.type === "file" ? <File tab={activeTab} />
-                    : activeTab.type === "planning-list" ? <List tab={activeTab} />
+                    : activeTab.type === "planning-list" ? <List key={activeTab.locatorId} tab={activeTab} />
                     : <p>Unknown tab type.</p>
                 )
             }

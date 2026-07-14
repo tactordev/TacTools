@@ -314,7 +314,7 @@ export default function List({ tab }: { tab: Tab; }) {
         if (!diffd) return;
 
         return localStorage.setItem(`list-${tab.locatorId}`, JSON.stringify({ values: listInfo }));
-    }, [listInfo, tab.locatorId]);
+    }, [listInfo]);
 
     const newTask = () => {
         const l = { tasks: [...listInfo.tasks], sections: [...listInfo.sections] } as List;
