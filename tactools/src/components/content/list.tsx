@@ -419,7 +419,9 @@ export default function List({ tab }: { tab: Tab; }) {
 
     const removeTask = (id: number) => {
         const ls = listInfo.tasks.filter((t) => t.id !== id);
-        setListInfo({ tasks: ls, sections: [...listInfo.sections] });
+        const sections = listInfo.sections.flatMap((s) => { return { ...s, tasks: s.tasks.filter((t) => t.id !== id ) } });
+
+        setListInfo({ tasks: ls, sections: [...sections] });
         return;
     }
 
