@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import Button from "../utils/button";
 import { AnimatePresence, motion } from "framer-motion";
-import { title } from "../sidebar/calendar";
+import { title } from "../sidebar/planning";
 import { nlu } from "../utils/nlu";
 
 type Task = {

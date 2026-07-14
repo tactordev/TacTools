@@ -9,7 +9,7 @@ import {
     MonitorCog,
     BadgeAlert
 } from "lucide-react";
-import Calendar from "./calendar";
+import Calendar from "./planning";
 import Notes from "./notes";
 import Button from "../utils/button";
 
