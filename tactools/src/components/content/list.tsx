@@ -319,7 +319,19 @@ export default function List({ tab }: { tab: Tab; }) {
 
     const newTask = () => {
         const l = { tasks: [...listInfo.tasks], sections: [...listInfo.sections] } as List;
-        const nid = listInfo.tasks.reduce((max, task) => { return Math.max(max, task.id); }, 0) + 1 as number;
+
+        let nid = 0;
+        for (const task of listInfo.tasks) {
+            if (task.id > nid) nid = task.id;
+        }
+
+        for (const section of listInfo.sections) {
+            for (const task of section.tasks) {
+                if (task.id > nid) nid = task.id;
+            }
+        }
+        nid++;
+
         l.tasks.push(
             {
                 id: nid,
