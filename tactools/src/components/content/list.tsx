@@ -526,7 +526,7 @@ export default function List({ tab }: { tab: Tab; }) {
                                 <form className="flex flex-row items-center" id={`form-section-${section.id}`} onSubmit={ changeName } onBlur={ changeName } >
                                     <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" spellCheck={false} defaultValue={section.name} name="newName" type="text" autoComplete="off" />
                                 </form>
-                            : <p className="text-gray-600 font-semibold mb-1">{ title(section.name) }</p> }
+                            : <p className="text-gray-600 font-semibold mb-1" onDoubleClick={() => { setEditing({ type: "section", id: section.id }); setTimeout(() => { const form = document.getElementById(`form-section-${section.id}`); if (!form) return; const input = form.children[0] as HTMLInputElement; input.focus(); input.select(); }, 20); }}>{ title(section.name) }</p> }
                             <div key={`sectiontaskdiv-0`} id={`sectiontaskdiv-${section.id}-0`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
                             {
                                 max(section.tasks.map((task, index) => 
