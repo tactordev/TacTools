@@ -7,13 +7,15 @@ import {
     Circle,
     Check,
     GripVertical,
-    Pointer
+    Trash2,
+    Edit
 } from "lucide-react";
 import Button from "../utils/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { title } from "../sidebar/planning";
 import Calendar from "./calendar";
 import { nlu } from "../utils/nlu";
+import ContextMenu from "../utils/context-menu";
 
 type Task = {
     id: number;
@@ -57,6 +59,7 @@ function Task(
         changeName,
         initLoad,
         setListInfo,
+        setEditing,
         listInfo
     }: {
         task: Task;
@@ -66,12 +69,15 @@ function Task(
         changeName: (e: React.SubmitEvent<HTMLFormElement> | any) => void;
         initLoad: boolean;
         setListInfo: (listInfo: List) => void;
+        setEditing: (editing: { type: string; id: number; }) => void;
         listInfo: List;
     }
 ) {
     const [dragging, setDragging] = useState<boolean>(false);
     const [pos, setPos] = useState<{ x: number; y: number; }>({ x: 0, y: 0 });
     const [offset, setOffset] = useState<{ x: number; y: number; }>({ x: 0, y: 0 });
+    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; } | false>(false);
+    const [confirmDelete, setConfirmDelete] = useState<boolean>(false);
     
     const closest = useRef<HTMLElement | null>(null);
     const drag = useRef<HTMLDivElement | null>(null);
@@ -138,11 +144,6 @@ function Task(
 
         const divs = getAllDivs();
 
-        // possible scenarios:
-        // section
-        // section task divider
-        // uncategorised task divider
-
         const ls = { tasks: [...listInfo.tasks], sections: [...listInfo.sections]};
 
         let curSect: { obj: Section | undefined; index: number; } | null = null;
@@ -199,6 +200,7 @@ function Task(
 
     return (
         <motion.div
+            onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setCtxMenu({ x: e.clientX, y: e.clientY }); }}
             layout
             key={task.id}
             initial={{ translateX: -5, opacity: 0 }}
@@ -238,6 +240,31 @@ function Task(
                     : <p className="text-gray-600 text-sm">{ task.name }</p>
                 }
             </Button>
+            <AnimatePresence>
+                {
+                    ctxMenu && (
+                        <ContextMenu x={ctxMenu.x} y={ctxMenu.y} onBlur={() => setCtxMenu(false)}>
+                            <Button onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setEditing({ type: "task", id: task.id }); setTimeout(() => { const form = document.getElementById(`form-${task.id}`); if (!form) return; const input = form.children[0] as HTMLInputElement; input.focus(); input.select(); }, 20); return; }} name="Rename"  className="flex flex-row items-center justify-start gap-3 !shadow-none select-none">
+                                <Edit className="w-4 h-4 text-gray-600" />
+                                <p className="text-gray-600 text-sm">Rename</p>
+                            </Button>
+                            <Button onClick={() => {
+                                if (!confirmDelete) return setConfirmDelete(true);
+
+                                const ls = { ...listInfo };
+                                ls.sections.map((s) => s.tasks.filter((t) => t.id !== task.id));
+                                ls.tasks = ls.tasks.filter((t) => t.id !== task.id);
+                                setListInfo(ls);
+                                return setCtxMenu(false);
+
+                            }} name="Delete"  className={`flex flex-row items-center justify-start gap-3 !shadow-none select-none bg-red-300/30 hover:!bg-red-300/20 ${confirmDelete ? "flash-red" : ""}`}>
+                                <Trash2 className="w-4 h-4 text-red-500/60" />
+                                <p className={`text-red-500/60 text-sm min-w-20`}>{ confirmDelete ? "Confirm?" : "Delete" }</p>
+                            </Button>    
+                        </ContextMenu>
+                    )
+                }
+            </AnimatePresence>
         </motion.div>  
     );
 }
@@ -478,7 +505,7 @@ export default function List({ tab }: { tab: Tab; }) {
                         listInfo.tasks && max (
                             listInfo.tasks.map((task, index) => 
                                 <div key={`task-${task.id}`} className="flex flex-col items-center justify-center mx-4 w-full h-full">
-                                    <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} setListInfo={setListInfo} listInfo={listInfo} initLoad={initLoad} />
+                                    <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} setListInfo={setListInfo} listInfo={listInfo} setEditing={setEditing} initLoad={initLoad} />
                                     <div id={`taskdiv-${task.id}`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 -mt-1" />
                                 </div>
                             )
@@ -504,7 +531,7 @@ export default function List({ tab }: { tab: Tab; }) {
                             {
                                 max(section.tasks.map((task, index) => 
                                         <div key={`task-${task.id}`}>
-                                            <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} setListInfo={setListInfo} listInfo={listInfo} initLoad={initLoad} />
+                                            <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} setListInfo={setListInfo} listInfo={listInfo} setEditing={setEditing} initLoad={initLoad} />
                                             <div id={`sectiontaskdiv-${section.id}-${task.id}`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
                                         </div>
                                 ),  <div key={`${section.id}-empty`} className="flex flex-col">
