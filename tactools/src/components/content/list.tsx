@@ -243,8 +243,8 @@ function Task(
 
 export default function List({ tab }: { tab: Tab; }) {
     if (
-        tab.title === "Overview"
-    ) return ( <p> Overview section not finished. </p> );
+        tab.title === "Overview" || tab.title === "Calendar"
+    ) return ( <p> Section unfinished. </p> );
 
 
     const [listInfo, setListInfo] = useState<List>(() => {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Button from "../utils/button";
-import { Hash, Plus, Inbox, Edit, Trash2 } from "lucide-react";
+import { Hash, Plus, Inbox, Edit, Trash2, Calendar1 } from "lucide-react";
 import { Tab } from "../../main";
 import ContextMenu from "../utils/context-menu";
 
@@ -45,7 +45,7 @@ function CTXMenu(
                 <Edit className="w-4 h-4 text-gray-600" />
                 <p className="text-gray-600 text-sm">Rename</p>
             </Button>
-            { lists.find((list) => list.id === id)!.name !== "overview" ? (
+            { !["overview", "calendar"].includes(lists.find((list) => list.id === id)!.name) ? (
                 <Button onClick={() => {
                     if (!confirmDelete) return setConfirmDelete(true);
 
@@ -69,12 +69,12 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
     const listRender = useRef<HTMLDivElement | null>(null);
 
     const [lists, setLists] = useState<{ name: string; id: number; }[]>(() => {
-        if (typeof window === "undefined") return [{ name: "overview", index: 0 }];
+        if (typeof window === "undefined") return [{ name: "overview", index: -1 }, { name: "calendar", index: 0 }];
 
         const saved = localStorage.getItem("listNames");
-        if (saved) return [ { name: "overview", id: 0}, ...JSON.parse(saved).values ];
+        if (saved) return [ { name: "overview", id: -1 }, { name: "calendar", id: 0 }, ...JSON.parse(saved).values ];
 
-        return [{ name: "overview", id: 0 }];
+        return [{ name: "overview", id: -1 }, { name: "calendar", id: 0 }];
     });
 
     const [lastId, setLastId] = useState<number>(() => {
@@ -93,7 +93,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
 
     useEffect(() => {
         const parsed = {
-            values: lists.filter((value) => value.name !== "overview")
+            values: lists.filter((value) => !["overview", "calendar"].includes(value.name))
         };
         localStorage.setItem("listNames", JSON.stringify(parsed));
     }, [lists]);
@@ -194,7 +194,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
                                                         active: true,
                                                         id: tabs.reduce((max, tab) => {return Math.max(max, tab.id)}, 0) + 1,
                                                         value: { 
-                                                            icon: value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80" /> : <Hash className="w-3 h-3 text-gray-600/80" />   
+                                                            icon: value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80" /> : value.name === "calendar" ? <Calendar1 className="w-4 h-4 text-gray-600/80" /> : <Hash className="w-3 h-3 text-gray-600/80" />   
                                                         },
                                                         locatorId: value.id.toString()
                                                     } as Tab
@@ -202,7 +202,7 @@ export default function Calendar({ tabs, setTabs }: { tabs: Tab[]; setTabs: (tab
                                                 clickTimeoutRef.current = null;
                                             }, 200);
                                             }}>
-                                            { value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80"/> : <Hash className="w-4 h-4 text-gray-600/80" />  }
+                                            { value.name === "overview" ? <Inbox className="w-4 h-4 text-gray-600/80"/> : value.name === "calendar" ? <Calendar1 className="w-4 h-4 text-gray-600/80" /> : <Hash className="w-4 h-4 text-gray-600/80" />  }
                                             {
                                                 editing === index ? (
                                                     <form onClick={(e) => { e.preventDefault(); }} className="flex flex-row items-center" id={`${value.id}`} onSubmit={ changeName } onBlur={ changeName } >
