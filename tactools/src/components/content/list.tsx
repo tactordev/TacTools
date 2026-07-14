@@ -12,6 +12,7 @@ import {
 import Button from "../utils/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { title } from "../sidebar/planning";
+import Calendar from "./calendar";
 import { nlu } from "../utils/nlu";
 
 type Task = {
@@ -242,9 +243,18 @@ function Task(
 }
 
 export default function List({ tab }: { tab: Tab; }) {
-    if (
-        tab.title === "Overview" || tab.title === "Calendar"
-    ) return ( <p> Section unfinished. </p> );
+    switch (tab.title.toLowerCase()) {
+        case "overview":
+            return (
+                <p>
+                    Overview not implemented.
+                </p>
+            );
+        case "calendar":
+            return (
+                <Calendar />
+            );
+    }
 
 
     const [listInfo, setListInfo] = useState<List>(() => {
