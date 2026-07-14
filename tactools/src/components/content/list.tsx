@@ -12,7 +12,6 @@ import {
 import Button from "../utils/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { title } from "../sidebar/calendar";
-import { currentMonitor } from "@tauri-apps/api/window";
 import { nlu } from "../utils/nlu";
 
 type Task = {
@@ -90,15 +89,17 @@ function Task(
     };
 
     const getAllDivs = () => {
-        const sectionIds = listInfo.sections.map((section) => { return section.id });
+        // const sectionIds = listInfo.sections.map((section) => { return section.id });
         const taskIds = listInfo.tasks.map((task) => { return task.id });
-        const sectTaskIds = listInfo.sections.map((section) => { return section.tasks.map((task) => task.id ); });
+        taskIds.push(0);
+        const sectTaskIds = listInfo.sections.flatMap((section) => { return [...section.tasks.map((task) => `${section.id}-${task.id}` ), `${section.id}-0`] });
         
-        const sectionDivs = sectionIds.map((id) => { const el = document.getElementById(`sectiondiv-${id}`); el?.classList.remove("!bg-blue-100/40", "closest"); return el; });
+        // const sectionDivs = sectionIds.map((id) => { const el = document.getElementById(`sectiondiv-${id}`); el?.classList.remove("!bg-blue-100/40", "closest"); return el; });
         const taskDivs = taskIds.map((id) => { const el = document.getElementById(`taskdiv-${id}`); el?.classList.remove("!opacity-100", "closest"); return el; });
-        const secTaskDivs = sectTaskIds.map((id) => { const el = document.getElementById(`sectiontaskid-${id}`); el?.classList.remove("!opacity-100", "closest"); return el; });
+        const secTaskDivs = sectTaskIds.map((id) => { const el = document.getElementById(`sectiontaskdiv-${id}`); el?.classList.remove("!opacity-100", "closest"); return el; });
 
-        return [...sectionDivs, ...taskDivs, ...secTaskDivs];
+        console.log(closest.current);
+        return [...taskDivs, ...secTaskDivs]; //...sectionDivs
     }
 
     const pointerMove = (e: PointerEvent) => {
@@ -136,57 +137,55 @@ function Task(
 
         const divs = getAllDivs();
 
-        let ls = { sections: [...listInfo.sections], tasks: [...listInfo.tasks]};
+        // possible scenarios:
+        // section
+        // section task divider
+        // uncategorised task divider
+
+        const ls = { tasks: [...listInfo.tasks], sections: [...listInfo.sections]};
+
+        let curSect: { obj: Section | undefined; index: number; } | null = null;
+        if (task.sectionId) {
+            curSect = { obj: ls.sections.find((section) => section.id === task.sectionId), index: ls.sections.findIndex((section) => section.id === task.sectionId) }
+        }
+        let curIndex: number = !curSect ? ls.tasks.findIndex((t) => t.id === task.id) : curSect.obj!.tasks.findIndex((t) => t.id === task.id);
+
         if (closest.current) {
-            const id = parseInt(closest.current.id.split("-")[1]);
             
-            if (closest.current.id.includes("sectiontaskdiv")) {
-                let curIndex = 0;
-
-                if (task.sectionId) {
-                    const curSectionIndex = ls.sections.findIndex((s) => s.id === task.sectionId);
-                    curIndex = ls.sections[curSectionIndex].tasks.findIndex((t) => t.id === task.id);
-                } else {
-                    curIndex = ls.tasks.findIndex((t) => t.id === task.id);
-                }
-                ls.tasks.splice(curIndex, 1);
-                const sectionId = parseInt(closest.current.parentElement!.parentElement!.id.split("-")[1]);
-                const sectionIndex = ls.sections.findIndex((s) => s.id === sectionId);
-                ls.sections[sectionIndex].tasks.splice(ls.sections[sectionIndex].tasks.length - 1, 0, { ...task, sectionId: sectionId });
-                if (task.sectionId) {
-                    const curSectionId = ls.sections.findIndex((s) => s.id === task.sectionId);
-                    ls.sections[curSectionId].tasks.splice(curIndex, 1);
-                } else {
-                    ls.tasks.splice(curIndex, 1);
-                }
-
-
-            } else if (closest.current.id.includes("taskdiv")) {
-                let curIndex = 0;
-                if (task.sectionId) {
-                    const curSectIndex = ls.sections.findIndex((s) => s.id === task.sectionId);
-                    curIndex = ls.sections[curSectIndex].tasks.findIndex((t) => t.id === task.id);
-                    ls.sections[curSectIndex].tasks.splice(curIndex, 1);
-                } else {
-                    curIndex = ls.tasks.findIndex((t) => t.id === task.id);
-                    ls.tasks.splice(curIndex, 1);
-                }
-                ls.tasks.splice(id, 0, { ...task, sectionId: null });
+            if (curSect) {
+                ls.sections[curSect.index].tasks = ls.sections[curSect.index].tasks.filter((t) => t.id !== task.id);
+                
             } else {
-                if (task.sectionId) {
-                    const curSectionIndex = ls.sections.findIndex((s) => s.id === task.sectionId);
-                    const curIndex = ls.sections[curSectionIndex].tasks.findIndex((t) => t.id === task.id);
-                    ls.sections[curSectionIndex].tasks.splice(curIndex, 1);
-                } else {
-                    const curIndex = ls.tasks.findIndex((t) => t.id === task.id);
-                    ls.tasks.splice(curIndex, 1);
-                }
+                ls.tasks = ls.tasks.filter((t) => t.id !== task.id);
+            }
 
-                const newSectionIndex = ls.sections.findIndex((s) => s.id === id);
-                ls.sections[newSectionIndex].tasks.splice(ls.sections[newSectionIndex].tasks.length - 1, 1, { ...task, sectionId: id });
+            if (closest.current.id.includes("sectiontaskdiv")) {
+                
+                const tlocId = closest.current.id.split("-")[2];
+                const sectId = closest.current.id.split("-")[1];
+
+                const nextSectIndex = ls.sections.findIndex((s) => s.id === parseInt(sectId));
+
+                if (tlocId === "0") {
+                    ls.sections[nextSectIndex].tasks.push({ ...task, sectionId: parseInt(sectId) });   
+                } else {
+                    const tind = ls.sections[nextSectIndex].tasks.findIndex((t) => t.id === parseInt(tlocId));
+                    ls.sections[nextSectIndex].tasks.splice(tind + 1, 0, { ...task, sectionId: parseInt(sectId) });
+                }
+            } else if (closest.current.id.includes("taskdiv")) {
+
+                const tlocId = closest.current.id.split("-")[1];
+                const tind = ls.tasks.findIndex((t) => t.id === parseInt(tlocId));
+                ls.tasks.splice(tind + 1, 0, { ...task, sectionId: null });
+            } else if (closest.current.id.includes("section")) {
+
+                const secId = closest.current.id.split("-")[1];
+                const secInd = ls.sections.findIndex((s) => s.id === parseInt(secId));
+                ls.sections[secInd].tasks.push({ ...task, sectionId: parseInt(secId) });
+            } else {
+                console.warn("Unknown closest element.");
             }
         }
-        console.log(closest.current);
 
         window.removeEventListener('pointermove', pointerMove);
         window.removeEventListener('pointerup', pointerUp);
@@ -461,14 +460,14 @@ export default function List({ tab }: { tab: Tab; }) {
                 <p className="text-gray-600 font-semibold mb-1">Uncategorised</p>
                 
                 
-                <div id={`taskdiv-0`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
+                <div id={`taskdiv-0`} className="w-full pt-0.5 h-0 ml-4 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1" />
                 <AnimatePresence>
                         {
                         listInfo.tasks && max (
                             listInfo.tasks.map((task, index) => 
-                                <div key={`task-${task.id}`} className="flex flex-col items-center justify-center w-full h-full">
+                                <div key={`task-${task.id}`} className="flex flex-col items-center justify-center mx-4 w-full h-full">
                                     <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} setListInfo={setListInfo} listInfo={listInfo} initLoad={initLoad} />
-                                    <div id={`taskdiv-${task.id}`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
+                                    <div id={`taskdiv-${task.id}`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 -mt-1" />
                                 </div>
                             )
                         , <div key={`uncategorised-empty`} className="flex flex-col">
@@ -484,18 +483,17 @@ export default function List({ tab }: { tab: Tab; }) {
                 {
                     listInfo.sections && listInfo.sections.map((section) =>
                         <div  className="w-96 mt-8 pb-8 px-4 -ml-4 py-2 rounded-md" key={`sectiondiv-${section.id}`} id={`sectiondiv-${section.id}`}> 
-                        
-                            <div key={`sectiontaskdiv-0`} id={`sectiontaskdiv-0`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
                             { editing && editing.type === "section" && editing.id === section.id ? 
                                 <form className="flex flex-row items-center" id={`form-section-${section.id}`} onSubmit={ changeName } onBlur={ changeName } >
                                     <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" spellCheck={false} defaultValue={section.name} name="newName" type="text" autoComplete="off" />
                                 </form>
                             : <p className="text-gray-600 font-semibold mb-1">{ title(section.name) }</p> }
+                            <div key={`sectiontaskdiv-0`} id={`sectiontaskdiv-${section.id}-0`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
                             {
                                 max(section.tasks.map((task, index) => 
                                         <div key={`task-${task.id}`}>
                                             <Task task={task} index={index} removeTask={removeTask} editing={editing} changeName={changeName} setListInfo={setListInfo} listInfo={listInfo} initLoad={initLoad} />
-                                            <div id={`sectiontaskdiv-${task.id}`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
+                                            <div id={`sectiontaskdiv-${section.id}-${task.id}`} className="w-full h-0.5 bg-blue-200 opacity-0 transition-opacity duration-200 hover:opacity-100 mb-1 -mt-1" />
                                         </div>
                                 ),  <div key={`${section.id}-empty`} className="flex flex-col">
                                         <div className="flex flex-col w-full mt-8 items-center justify-center">
