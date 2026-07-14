@@ -12,7 +12,7 @@ export default function ContextMenu(
     }: {
         x: number;
         y: number;
-        onBlur: () => void;
+        onBlur: (e: React.FocusEvent) => void;
         children: React.ReactNode;
     }
 ) {
@@ -22,11 +22,21 @@ export default function ContextMenu(
         menuRef.current?.focus();
     }, []);
 
+    const handleBlur = (e: React.FocusEvent) => {
+        const nextFocused = e.relatedTarget as Node | null;
+
+        if (nextFocused && menuRef.current?.contains(nextFocused)) {
+            return;
+        }
+
+        onBlur(e);
+    };
+
     const menu = ( 
         <motion.div
             ref={menuRef}
             tabIndex={0}
-            onBlur={onBlur}
+            onBlur={handleBlur}
             onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); return; }}
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}

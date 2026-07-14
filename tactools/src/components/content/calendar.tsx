@@ -7,7 +7,7 @@ import ContextMenu from "../utils/context-menu";
 import {
     ImportIcon
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type Event = {
     id: number;
@@ -91,25 +91,52 @@ function TimeLine() {
 
 
 export default function Calendar() {
-    const [events, setEvents] = useState<Event[]>([
-        { id: 1, name: "School", date: Date.now(), start: 510, end: 930, calendar: "School", calendarId: 1 }, 
-        { id: 2, name: "Games", date: Date.now(), start: 975, end: 1125, calendar: "Home", calendarId: 2 }
-    ]);
+    // testing data
+    // [
+    //     { id: 1, name: "School", date: Date.now(), start: 510, end: 930, calendar: "School", calendarId: 1 }, 
+    //     { id: 2, name: "Games", date: Date.now(), start: 975, end: 1125, calendar: "Home", calendarId: 2 }
+    // ]
+    const [events, setEvents] = useState<Event[]>(() => {
+        const loadedCalendars = localStorage.getItem("loaded-calendars");
+        if (!loadedCalendars) {
+            localStorage.setItem("loaded-calendars", JSON.stringify([]));
+            return [];
+        }
+
+        const events: Event[] = [];
+        const calendarIds = JSON.parse(loadedCalendars);
+        calendarIds.map((id: string) => { const calendarEvents = localStorage.getItem(`calendar-${id}`); if (!calendarEvents) return; const cEvents = JSON.parse(calendarEvents).events; events.push(...cEvents); })
+        
+        return events;
+    });
+
+    // loaded-calendars: [id1, id2, ....];
+    // calendar-id: { importLink?: string; events: Event[] };
+
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-    const Import = () => {
+    const Import = ({ loadiCal }: { loadiCal: (ical: string) => void; }) => {
         const [importMenu, setImportMenu] = useState<{ x: number; y: number; } | false>(false);
+        const [importing, setImporting] = useState<string | false>(false);
+
+        const importInput = useRef<HTMLInputElement | null>(null);
         
         return (
-            <Button onClick={(e) => { setImportMenu({ x: e.clientX + (e.currentTarget.getBoundingClientRect().x - e.clientX), y: e.clientY - (e.clientY - e.currentTarget.getBoundingClientRect().bottom) + 5 }); }} onBlur={() => { setImportMenu(false); }} className="relative">
+            <Button onClick={(e) => { setImportMenu({ x: e.clientX + (e.currentTarget.getBoundingClientRect().x - e.clientX), y: e.clientY - (e.clientY - e.currentTarget.getBoundingClientRect().bottom) + 5 }); }} className="relative">
                 <ImportIcon className="w-4 h-4 text-gray-600" />
                 <AnimatePresence>
                     {
                         importMenu && (
-                            <ContextMenu x={importMenu.x} y={importMenu.y} onBlur={() => { setImportMenu(false); }}>
-                                <p>
-                                    Import calendars
-                                </p>
+                            <ContextMenu x={importMenu.x} y={importMenu.y} onBlur={(e: React.FocusEvent) => { 
+                                setImporting(false);
+                                setImportMenu(false);
+                            }}>
+                                {
+                                    importing === "google-calendar" ? <form onSubmit={(e: React.SubmitEvent) => { e.preventDefault(); e.stopPropagation(); const data = new FormData(e.currentTarget as HTMLFormElement).get("ical") as string; loadiCal(data); setImporting(false); return setImportMenu(false); }}><input name="ical" placeholder="Enter iCal link..." ref={importInput} className="outline-none focus:outline-none text-xs" /></form>
+                                    : <Button onClick={() => {setImporting("google-calendar"); setTimeout(() => { if (!importInput.current) return; importInput.current.focus(); }, 100)}} className="!shadow-none">
+                                        <p className="text-xs">Import from Google Calendar</p>
+                                    </Button>
+                                }
                             </ContextMenu>
                         )
                     }
@@ -118,10 +145,15 @@ export default function Calendar() {
         );
     };
 
+
+    const loadiCal = (iCal: string) => {
+
+    }
+
     return (
         <div className="flex flex-row w-full h-full gap-0.5 px-4 my-4">
             <div className="flex flex-col h-full pr-2 items-center">
-                <Import />
+                <Import loadiCal={loadiCal} />
                 <TimeLine />
             </div>
             <div className="flex flex-row w-full justify-between">

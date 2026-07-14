@@ -3,7 +3,7 @@ import { useRef } from "react";
 
 
 
-export default function Button({ children, className, name, onClick, onBlur, disableMovement }: { children?: React.ReactNode; className?: string; name?: string; onClick?: (e: React.MouseEvent) => void; onBlur?: () => void; disableMovement?: boolean }) {
+export default function Button({ children, className, name, onClick, onBlur, disableMovement }: { children?: React.ReactNode; className?: string; name?: string; onClick?: (e: React.MouseEvent) => void; onBlur?: (e: React.FocusEvent) => void; disableMovement?: boolean }) {
     const foo = () => { return true; }
     const button = useRef<HTMLDivElement | null>(null);
 
