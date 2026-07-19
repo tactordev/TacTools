@@ -5,12 +5,15 @@ import { AnimatePresence } from "framer-motion";
 import Button from "../utils/button";
 import ContextMenu from "../utils/context-menu";
 import {
+    CalendarArrowDown,
     ImportIcon
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useReducer, useRef, useState, useEffect } from "react";
+import { fetch as tFetch } from "@tauri-apps/plugin-http";
+import ICAL from "ical.js";
 
 type Event = {
-    id: number;
+    uid: string;
     name: string;
     date: number;
     start: number;
@@ -18,6 +21,7 @@ type Event = {
     calendar: string;
     calendarId: number;
     description?: string;
+    visible: boolean;
 }
 
 function Day(
@@ -31,6 +35,24 @@ function Day(
         setEvents: (events: Event[]) => void;
     }
 ) {
+    const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+    const today = new Date();
+
+    const currentDayIndex = today.getDay(); 
+    const distanceToMonday = currentDayIndex === 0 ? 6 : currentDayIndex - 1;
+
+    const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - distanceToMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    const startOfWeekTimestamp = startOfWeek.getTime();
+    const endOfWeekTimestamp = endOfWeek.getTime();
+
+
     return (
         <div className="flex flex-col w-full items-center first:border-l-2 border-r-2 border-gray-100 h-full">
             <p className="w-full text-center font-semibold text-gray-600 h-6">
@@ -41,9 +63,17 @@ function Day(
             <div className="relative w-full h-[calc(100%-4rem)] mt-9">
                 {
                     events.map((event: Event, index: number) => {
-                        const dIndex = new Date(event.date).getDay();
-                        const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+                        const eventDay = new Date(event.date);
+                        const eventTimestamp = eventDay.getTime();
+
+                        const isInCurrentWeek = eventTimestamp >= startOfWeekTimestamp && eventTimestamp <= endOfWeekTimestamp;
+
+                        const dIndex = eventDay.getDay();
                         const dayname = daysMap[dIndex];
+
+                        const isCurrentDayColumn = type.toLowerCase() === dayname;
+
+                        if (!isInCurrentWeek || !isCurrentDayColumn) return <div key={`unrendered-${event.uid}-${index}`}></div>;
 
                         const totalMinutes = 24 * 60;
                         const topPercent = (event.start / totalMinutes) * 100;
@@ -91,11 +121,6 @@ function TimeLine() {
 
 
 export default function Calendar() {
-    // testing data
-    // [
-    //     { id: 1, name: "School", date: Date.now(), start: 510, end: 930, calendar: "School", calendarId: 1 }, 
-    //     { id: 2, name: "Games", date: Date.now(), start: 975, end: 1125, calendar: "Home", calendarId: 2 }
-    // ]
     const [events, setEvents] = useState<Event[]>(() => {
         const loadedCalendars = localStorage.getItem("loaded-calendars");
         if (!loadedCalendars) {
@@ -105,13 +130,24 @@ export default function Calendar() {
 
         const events: Event[] = [];
         const calendarIds = JSON.parse(loadedCalendars);
-        calendarIds.map((id: string) => { const calendarEvents = localStorage.getItem(`calendar-${id}`); if (!calendarEvents) return; const cEvents = JSON.parse(calendarEvents).events; events.push(...cEvents); })
+        calendarIds.map((id: string) => { const calendarEvents = localStorage.getItem(`calendar-${id}`); if (!calendarEvents) return; const cEvents = JSON.parse(calendarEvents).events; events.push(...(cEvents.map((e) => { return { ...e, visible: JSON.parse(calendarEvents).visible as boolean } }))); })
         
         return events;
     });
 
-    // loaded-calendars: [id1, id2, ....];
-    // calendar-id: { importLink?: string; events: Event[] };
+    const [icalUrls, setIcalUrls] = useState<string[]>(() => {
+        const icalUrls = localStorage.getItem("ical-urls");
+        if (!icalUrls) {
+            localStorage.setItem("ical-urls", JSON.stringify([]));
+            return [];
+        }
+
+        return JSON.parse(icalUrls);
+    });
+    
+    const [fr, forceRefresh] = useReducer(i => i + 1, 0);
+
+
 
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -145,9 +181,114 @@ export default function Calendar() {
         );
     };
 
+    useEffect(() => {
+        let m = true;
+        
+        const fetchAllCalendars = async () => {
+            // console.log(`[iCal Loader]: Begun fetchAllCalendars`);
+
+            const events: Event[] = [];
+            const cals: string[] = JSON.parse(localStorage.getItem("loaded-calendars") || "[]");
+
+            for (const url of icalUrls) {
+                // console.log(`[iCal Loader]: Loading url ${url}`);
+                const response = await tFetch(url);
+                if (!response.ok) {console.warn(`[iCal Loader]: Invalid network response (${response.status}) on ${url}.`); continue; };
+
+                const raw = await response.text();
+
+                const jcal = ICAL.parse(raw);
+                const comp = new ICAL.Component(jcal);
+                const vevents = comp.getAllSubcomponents('vevent');
+
+                // console.log(`[iCal Loader]: Loaded events using parser.`);
+
+
+                const calName = comp.getFirstPropertyValue("x-wr-calname") || "Imported";
+                const generatedId = Math.abs(url.split("").reduce((a, b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 0));
+
+                // console.log(`[iCal Loader]: Calendar properties loaded`);
+
+                const now = new Date();
+                const rangeStart = new Date(now); rangeStart.setDate(now.getDate() - 60);
+                const rangeEnd = new Date(now); rangeEnd.setDate(now.getDate() + 60);
+
+                const pEvents: Event[] = [];
+
+                for (const vevent of vevents) {
+                    const event = new ICAL.Event(vevent);
+
+                    if (event.isRecurring()) {
+                        const iterator = event.iterator();
+                        let next;
+                        while ((next = iterator.next())) {
+                            const occurrence = next.toJSDate();
+                            if (occurrence > rangeEnd) break;
+                            if (occurrence < rangeStart) continue;
+
+                            const details = event.getOccurrenceDetails(next);
+                            pEvents.push({
+                                uid: `${event.uid}-${next.toString()}`,
+                                name: event.summary || "Untitled",
+                                description: event.description || "",
+                                date: details.startDate.toJSDate().getTime(),
+                                start: details.startDate.toJSDate().getHours() * 60 + details.startDate.toJSDate().getMinutes(),
+                                end: details.endDate.toJSDate().getHours() * 60 + details.endDate.toJSDate().getMinutes(),
+                                calendar: calName as string,
+                                calendarId: generatedId,
+                                visible: true
+                            });
+                        }
+                    } else {
+                        pEvents.push({
+                            uid: event.uid,
+                            name: event.summary || "Untitled",
+                            description: event.description || "",
+                            date: event.startDate.toJSDate().getTime(),
+                            start: event.startDate.toJSDate().getHours() * 60 + event.startDate.toJSDate().getMinutes(),
+                            end: event.endDate.toJSDate().getHours() * 60 + event.endDate.toJSDate().getMinutes(),
+                            calendar: calName as string,
+                            calendarId: generatedId,
+                            visible: true
+                        });
+                    }
+                }
+                events.push(...pEvents);
+                localStorage.setItem(`calendar-${generatedId}`, JSON.stringify({ importLink: url, events: [...pEvents], visible: true }));
+
+                // console.log(`[iCal Loader]: Pushed calendar properties to local storage.`);
+
+                if (!cals.includes(String(generatedId))) {
+                    cals.push(String(generatedId));
+                };
+            };
+
+            if (m) {
+                // console.log(`[iCal Loader]: Component mounted. Saving calendars to local storage.`);
+                localStorage.setItem("loaded-calendars", JSON.stringify(cals));
+                setEvents(events);
+            }
+        };
+
+        fetchAllCalendars();
+
+        const interval = setInterval(fetchAllCalendars, 5 * 60 * 1000);
+
+        return () => {
+            m = false;
+            clearInterval(interval);
+        };
+    }, [icalUrls]);
+
+
+    useEffect(() => {
+        localStorage.setItem("ical-urls", JSON.stringify((icalUrls)));
+    }, [icalUrls]);
 
     const loadiCal = (iCal: string) => {
-
+        console.log(`[iCal Loader]: Submitted the form.`);
+        console.log(`[iCal Loader]: Setting iCal URLs. `, iCal);
+        return setIcalUrls([...icalUrls, iCal]);
     }
 
     return (

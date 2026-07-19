@@ -38,7 +38,12 @@
     },
     "opener:allow-reveal-item-in-dir",
     "opener:allow-open-url",
-    "opener:allow-default-urls"
+    "opener:allow-default-urls",
+    "http:default",
+    {
+      "identifier": "http:default",
+      "allow": [{ "url": "https://calendar.google.com/*"}]
+    }
   ],
   "commands": [
     "scope_drive"
