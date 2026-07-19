@@ -1,11 +1,13 @@
 "use client";
 
 
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import Button from "../utils/button";
 import ContextMenu from "../utils/context-menu";
 import {
     CalendarArrowDown,
+    ChevronLeft,
+    ChevronRight,
     ImportIcon
 } from "lucide-react";
 import { useReducer, useRef, useState, useEffect } from "react";
@@ -28,74 +30,70 @@ function Day(
     {
         type,
         events,
-        setEvents
+        offsetDate
     }: {
         type: string;
         events: Event[];
         setEvents: (events: Event[]) => void;
+        offsetDate: Date;
     }
 ) {
     const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
-    const today = new Date();
+    const targetDayIndex = daysMap.indexOf(type.toLowerCase());
+    const distanceFromMonday = targetDayIndex === 0 ? 6 : targetDayIndex - 1;
 
-    const currentDayIndex = today.getDay(); 
-    const distanceToMonday = currentDayIndex === 0 ? 6 : currentDayIndex - 1;
+    const columnDate = new Date(offsetDate);
+    columnDate.setDate(offsetDate.getDate() + distanceFromMonday);
 
-    const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - distanceToMonday);
-    startOfWeek.setHours(0, 0, 0, 0);
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59, 999);
-
-    const startOfWeekTimestamp = startOfWeek.getTime();
-    const endOfWeekTimestamp = endOfWeek.getTime();
-
+    const startOfDayTimestamp = new Date(columnDate.getFullYear(), columnDate.getMonth(), columnDate.getDate(), 0, 0, 0, 0).getTime();
+    const endOfDayTimestamp = new Date(columnDate.getFullYear(), columnDate.getMonth(), columnDate.getDate(), 23, 59, 59, 999).getTime();
 
     return (
         <div className="flex flex-col w-full items-center first:border-l-2 border-r-2 border-gray-100 h-full">
-            <p className="w-full text-center font-semibold text-gray-600 h-6">
-                {type}
-            </p>
+            <AnimatePresence>
+                <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 100 }}
+                transition={{ duration: 0.25 }}
+                className="w-full text-center font-semibold text-gray-600 h-6">
+                    {type} [{columnDate.getDate()}]
+                </motion.p>
+            </AnimatePresence>
             <hr className="bg-gray-100 text-gray-100 w-full h-0.5 mt-0.5" />
             
             <div className="relative w-full h-[calc(100%-4rem)] mt-9">
-                {
-                    events.map((event: Event, index: number) => {
-                        const eventDay = new Date(event.date);
-                        const eventTimestamp = eventDay.getTime();
+                <AnimatePresence>
+                    {
+                        events.map((event: Event, index: number) => {
+                            const eventTimestamp = event.date;
+                            const isInThisDay = eventTimestamp >= startOfDayTimestamp && eventTimestamp <= endOfDayTimestamp;
 
-                        const isInCurrentWeek = eventTimestamp >= startOfWeekTimestamp && eventTimestamp <= endOfWeekTimestamp;
+                            if (!isInThisDay || !event.visible) return null;
 
-                        const dIndex = eventDay.getDay();
-                        const dayname = daysMap[dIndex];
+                            const totalMinutes = 24 * 60;
+                            const topPercent = (event.start / totalMinutes) * 100;
+                            const heightPercent = ((event.end - event.start) / totalMinutes) * 100;
 
-                        const isCurrentDayColumn = type.toLowerCase() === dayname;
-
-                        if (!isInCurrentWeek || !isCurrentDayColumn) return <div key={`unrendered-${event.uid}-${index}`}></div>;
-
-                        const totalMinutes = 24 * 60;
-                        const topPercent = (event.start / totalMinutes) * 100;
-                        const heightPercent = ((event.end - event.start) / totalMinutes) * 100;
-
-                        if (type.toLowerCase() === dayname) {
                             return (
-                                <div 
-                                    key={`event-${index}`} 
+                                <motion.div 
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    transition={{ duration: 0.2 }}
+                                    key={`event-${event.uid}-${index}`} 
                                     className="absolute left-1 right-1 rounded-md p-1.5 text-xs font-medium bg-gray-100 overflow-hidden" 
                                     style={{top: `${topPercent}%`, height: `${heightPercent}%`}}
                                 >
-                                    <p className="font-bold truncate leading-none">{event.name}</p>
-                                    <p className="text-[10px] text-blue-800 mt-0.5">
+                                    <p className="font-semibold text-gray-600 truncate leading-none">{event.name}</p>
+                                    <p className="text-[0.625rem] text-blue-700/80 mt-1">
                                         {Math.floor(event.start / 60)}:{(event.start % 60).toString().padStart(2, '0')}
                                     </p>
-                                </div>
-                            )
-                        }
-                        return null;
-                    })
-                }
+                                </motion.div>
+                            );
+                        })
+                    }
+                </AnimatePresence>
             </div>
         </div>
     );
@@ -130,7 +128,7 @@ export default function Calendar() {
 
         const events: Event[] = [];
         const calendarIds = JSON.parse(loadedCalendars);
-        calendarIds.map((id: string) => { const calendarEvents = localStorage.getItem(`calendar-${id}`); if (!calendarEvents) return; const cEvents = JSON.parse(calendarEvents).events; events.push(...(cEvents.map((e) => { return { ...e, visible: JSON.parse(calendarEvents).visible as boolean } }))); })
+        calendarIds.map((id: string) => { const calendarEvents = localStorage.getItem(`calendar-${id}`); if (!calendarEvents) return; const cEvents = JSON.parse(calendarEvents).events; events.push(...(cEvents.map((e: Event) => { return { ...e, visible: JSON.parse(calendarEvents).visible as boolean } }))); })
         
         return events;
     });
@@ -144,8 +142,25 @@ export default function Calendar() {
 
         return JSON.parse(icalUrls);
     });
+
+    
+    const getCurMonDate = () => {
+        const today = new Date();
+        const currentDayIndex = today.getDay();
+        const distanceToMonday = currentDayIndex === 0 ? 6 : currentDayIndex - 1;
+
+        const startOfWeek = new Date(today.getFullYear(), today.getMonth(), today.getDate() - distanceToMonday);
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        return startOfWeek;
+    }
     
     const [fr, forceRefresh] = useReducer(i => i + 1, 0);
+    const [monDate, setMonDate] = useState<Date>(() => {
+        return getCurMonDate();
+    });
+
+
 
 
 
@@ -291,18 +306,42 @@ export default function Calendar() {
         return setIcalUrls([...icalUrls, iCal]);
     }
 
+    const handlePrevWeek = (e: React.MouseEvent) => {
+        e.preventDefault();
+        const nextDate = new Date(monDate);
+        nextDate.setDate(monDate.getDate() - 7);
+        setMonDate(nextDate);
+        forceRefresh();
+    };
+
+    const handleNextWeek = (e: React.MouseEvent) => {
+        e.preventDefault();
+        const nextDate = new Date(monDate);
+        nextDate.setDate(monDate.getDate() + 7);
+        setMonDate(nextDate);
+        forceRefresh();
+    };
+
     return (
         <div className="flex flex-row w-full h-full gap-0.5 px-4 my-4">
             <div className="flex flex-col h-full pr-2 items-center">
                 <Import loadiCal={loadiCal} />
                 <TimeLine />
             </div>
-            <div className="flex flex-row w-full justify-between">
+            <div className="flex flex-row relative w-full justify-between">
                 {
                     days.map((day, index) => 
-                        <Day key={index} type={day} events={events} setEvents={setEvents} />
+                        <Day key={index} type={day} events={events} setEvents={setEvents} offsetDate={monDate} />
                     )
                 }
+                <div className="absolute flex flex-row gap-1 -top-0.5 right-1">
+                    <Button className="!px-1" onClick={handlePrevWeek}>
+                        <ChevronLeft className="text-gray-600 rounded-lg w-4 h-4" />
+                    </Button>
+                    <Button className="!px-1" onClick={handleNextWeek}>
+                        <ChevronRight className="text-gray-600 rounded-lg w-4 h-4"  />
+                    </Button>
+                </div>
             </div>
         </div>
     )
