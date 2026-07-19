@@ -8,7 +8,15 @@ import {
     CalendarArrowDown,
     ChevronLeft,
     ChevronRight,
-    ImportIcon
+    ImportIcon,
+    Pin,
+    Plus,
+    Calendar as LCalendar,
+    ALargeSmall,
+    Hash,
+    CalendarRange,
+    Clock,
+    TextAlignStart
 } from "lucide-react";
 import { useReducer, useRef, useState, useEffect } from "react";
 import { fetch as tFetch } from "@tauri-apps/plugin-http";
@@ -102,7 +110,7 @@ function Day(
 function TimeLine() {
     const times = [...Array(25).keys()];
     return (
-        <div className="flex flex-col h-[calc(100%-4rem)] w-fit mt-9 justify-between">
+        <div className="flex flex-col h-[calc(100%-4rem)] w-fit mt-1 justify-between">
             {
                 times.map((time, index) => {
                     const formattedTime = `${time.toString().padStart(2, '0')}:00`;
@@ -129,7 +137,7 @@ export default function Calendar() {
         const events: Event[] = [];
         const calendarIds = JSON.parse(loadedCalendars);
         calendarIds.map((id: string) => { const calendarEvents = localStorage.getItem(`calendar-${id}`); if (!calendarEvents) return; const cEvents = JSON.parse(calendarEvents).events; events.push(...(cEvents.map((e: Event) => { return { ...e, visible: JSON.parse(calendarEvents).visible as boolean } }))); })
-        
+        events.filter((event) => calendarIds.includes(event.calendarId));
         return events;
     });
 
@@ -195,6 +203,175 @@ export default function Calendar() {
             </Button>
         );
     };
+
+
+    const NewEvent = () => {
+        const [dropdown, setDropdown] = useState<boolean>(false);
+        const [dropdownChoice, setDropdownChoice] = useState<"calendar" | "event">("event");
+        const [searchDropdown, setSearchDropdown] = useState<boolean>(false);
+        const [input, setInput] = useState<string>("");
+
+        const [cals, setCals] = useState<{events: Event[], importUrl: string, title: string}[]>(() => {
+            const calendars = localStorage.getItem("loaded-calendars");
+            if (!calendars) return [];
+
+            const calendarIds = JSON.parse(calendars);
+            return calendarIds
+                .map((calendarId: string) => {
+                    const item = localStorage.getItem(`calendar-${calendarId}`);
+                    return item ? JSON.parse(item) : null;
+                })
+                .filter(Boolean);
+        });
+        const calSearchRef = useRef<HTMLInputElement | null>(null);
+
+        const filCals = cals.filter((cal: any) => cal?.title?.toLowerCase().includes(input.toLowerCase()));
+
+        return (
+            <div className="flex flex-row items-center justify-center relative">
+                <Button onClick={() => { setDropdown(!dropdown); }} className="mt-1">
+                    <Plus className="text-gray-600 w-4 h-4" />
+                </Button>
+                <AnimatePresence>
+                    { dropdown && ( <motion.div initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 100, translateX: 0 }} transition={{ duration: 0.125 }} exit={{ opacity: 0, translateX: -5 }} className="absolute flex flex-col top-full left-0 z-100 bg-gray-100/40 shadow-sm backdrop-blur-md mt-1 rounded-md transition-height duration-200">
+                        <div className="flex flex-row gap-1 justify-around mx-1 px-1 py-1 mt-1 bg-gray-200 rounded-md backdrop-blur-md"> 
+                            <div onClick={() => { setDropdownChoice("calendar"); }} className={`px-8 py-0.5 rounded-md ${dropdownChoice === "calendar" ? "bg-white/60" : "opacity-20 hover:cursor-pointer hover:bg-white hover:opacity-40 transition-all duration-200"}`} ><LCalendar className="text-gray-500 w-4 h-4" /></div>
+                            <div onClick={() => { setDropdownChoice("event"); }} className={`px-8 py-0.5 rounded-md ${dropdownChoice === "event" ? "bg-white/60" : "opacity-20 hover:cursor-pointer hover:bg-white hover:opacity-40 transition-all duration-200"}`} ><Pin className="text-gray-500 w-4 h-4" /></div>
+                        </div>
+                        <AnimatePresence>
+                            {
+                                dropdownChoice === "event" ? 
+                                    <motion.div className="mt-2 mx-2 mb-4">
+                                        <form className="w-full h-full flex flex-col gap-3">
+                                            <div className="flex flex-row mt-1 relative items-center justify-center group">
+                                                <input 
+                                                    type="text" 
+                                                    name="title" 
+                                                    placeholder=" " 
+                                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:border-gray-300 transition-all duration-200" 
+                                                />
+                                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                                >
+                                                    <ALargeSmall className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                    <p className="text-xs text-gray-600">Event Title</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-row mt-2.5 relative items-center justify-center group">
+                                                <input 
+                                                    type="date" 
+                                                    placeholder=" "
+                                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:border-gray-300 transition-all duration-200" 
+                                                />
+                                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                                >
+                                                    <Clock className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                    <p className="text-xs text-gray-600">Start Date</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-row mt-2.5 relative items-center justify-center group">
+                                                <input 
+                                                    type="date" 
+                                                    placeholder=" "
+                                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:border-gray-300 transition-all duration-200" 
+                                                />
+                                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                                >
+                                                    <Clock className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                    <p className="text-xs text-gray-600">End Date</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-row mt-2.5 relative items-center justify-center group">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder=" "
+                                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:border-gray-300 transition-all duration-200" 
+                                                />
+                                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                                >
+                                                    <TextAlignStart className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                    <p className="text-xs text-gray-600">Description</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-row mt-2.5 relative items-center justify-center group mb-24">
+                                                <input 
+                                                    ref={calSearchRef} 
+                                                    onChange={(e) => { setInput(e.target.value); }} 
+                                                    onFocus={() => { setSearchDropdown(true); }} 
+                                                    onBlur={() => { setTimeout(() => { setSearchDropdown(false); }, 200)}} 
+                                                    type="search" 
+                                                    placeholder=" "
+                                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:border-gray-300 transition-all duration-200" 
+                                                />
+                                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                                >
+                                                    <LCalendar className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                    <p className="text-xs text-gray-600">Calendar</p>
+                                                </div>
+                                                <AnimatePresence>
+                                                    { searchDropdown &&
+                                                        <motion.div initial={{ opacity: 0, translateY: -5 }} animate={{ opacity: 1, translateY: 0 }} transition={{ duration: 0.2 }} exit={{ opacity: 0, translateY: -5, transition: { duration: 0.125 }}} className="absolute top-full mt-0.5 left-0 bg-gray-100 backdrop-blur-md rounded-md px-2 py-2 shadow-sm w-full h-[calc(100%+4rem)]">
+                                                            <AnimatePresence>
+                                                                {filCals.length === 0 ? (
+                                                                    <motion.p 
+                                                                        initial={{ opacity: 0 }} 
+                                                                        animate={{ opacity: 1 }} 
+                                                                        exit={{ opacity: 0 }}
+                                                                        className="text-gray-400 text-xs text-center py-2"
+                                                                    >
+                                                                        No calendars found
+                                                                    </motion.p>
+                                                                ) : (
+                                                                    filCals.map((cal: any) => (
+                                                                        <motion.div 
+                                                                            key={cal.title} 
+                                                                            initial={{ opacity: 0, translateX: -5 }} 
+                                                                            animate={{ opacity: 1, translateX: 0 }} 
+                                                                            transition={{ duration: 0.2, delay: 0.5 }}
+                                                                            className="text-gray-600 text-xs"
+                                                                        >
+                                                                            <Button onClick={() => {if (calSearchRef.current) { calSearchRef.current.value = cal.title; calSearchRef.current.focus(); } }} name={`${cal.title}`} className="!shadow-none">{ cal.title }</Button>
+                                                                        </motion.div>
+                                                                    ))
+                                                                )}
+                                                            </AnimatePresence>
+                                                        </motion.div>
+                                                    }
+                                                </AnimatePresence>
+                                            </div>
+
+                                            <Button className="text-xs text-gray-600 -mb-2" name="submit">Submit</Button>
+                                            
+                                        </form>
+                                    </motion.div>
+                                :  
+                                    <div>
+
+                                    </div>
+                            }
+                        </AnimatePresence>
+                    </motion.div> ) }
+                </AnimatePresence>
+            </div>
+        )
+    }
 
     useEffect(() => {
         let m = true;
@@ -269,7 +446,7 @@ export default function Calendar() {
                     }
                 }
                 events.push(...pEvents);
-                localStorage.setItem(`calendar-${generatedId}`, JSON.stringify({ importLink: url, events: [...pEvents], visible: true }));
+                localStorage.setItem(`calendar-${generatedId}`, JSON.stringify({ importLink: url, events: [...pEvents], visible: true, title: calName as string }));
 
                 // console.log(`[iCal Loader]: Pushed calendar properties to local storage.`);
 
@@ -324,7 +501,8 @@ export default function Calendar() {
 
     return (
         <div className="flex flex-row w-full h-full gap-0.5 px-4 my-4">
-            <div className="flex flex-col h-full pr-2 items-center">
+            <div className="flex flex-col h-full pr-2 items-center gap-1">
+                <NewEvent />
                 <Import loadiCal={loadiCal} />
                 <TimeLine />
             </div>
