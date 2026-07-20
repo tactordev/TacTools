@@ -16,8 +16,9 @@ import { title } from "../sidebar/planning";
 import Calendar from "./calendar";
 import { nlu } from "../utils/nlu";
 import ContextMenu from "../utils/context-menu";
+import Overview from "./overview";
 
-type Task = {
+export type Task = {
     id: number;
     name: string;
     sectionId: number | null;
@@ -29,7 +30,7 @@ type Task = {
     parentTask?: Task;
 }
 
-type Section = {
+export type Section = {
     id: number;
     name: string;
     tasks: Task[];
@@ -37,7 +38,7 @@ type Section = {
 }
 
 
-type List = {
+export type List = {
     tasks: Task[];
     sections: Section[];
 }
@@ -235,7 +236,12 @@ function Task(
                             <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" spellCheck={false} defaultValue={task.name} name="newName" type="text" autoComplete="off" />
                         </form>
                     )
-                    : <p className="text-gray-600 text-sm">{ task.name }</p>
+                    : <div className="flex flex-row w-full justify-between pr-2">
+                        <p className="text-gray-600 text-sm">{ task.name }</p>
+                        <p className="text-xs text-gray-500/70">
+                            {new Date(task.due!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        </p>
+                    </div>
                 }
             </Button>
             <AnimatePresence>
@@ -267,13 +273,11 @@ function Task(
     );
 }
 
-export default function List({ tab }: { tab: Tab; }) {
+export default function List({ tab, tabs, setTabs }: { tab: Tab; tabs: Tab[], setTabs: (tabs: Tab[]) => void; }) {
     switch (tab.title.toLowerCase()) {
         case "overview":
             return (
-                <p>
-                    Overview not implemented.
-                </p>
+                <Overview tabs={tabs} setTabs={setTabs} />
             );
         case "calendar":
             return (

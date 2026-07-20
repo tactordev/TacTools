@@ -27,7 +27,6 @@ import {
 import { useReducer, useRef, useState, useEffect } from "react";
 import { fetch as tFetch } from "@tauri-apps/plugin-http";
 import ICAL from "ical.js";
-import { defineLanguageFacet } from "@codemirror/language";
 
 type RecurrenceRules = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
@@ -721,11 +720,7 @@ const EventContextMenu = (
                                     type="datetime-local" 
                                     placeholder=" "
                                     name="end"
-                                    defaultValue={toDatetimeLocalValue(() => {
-                                        const d = new Date(event.date);
-                                        d.setHours(Math.floor(event.end / 60), event.end % 60, 0, 0);
-                                        return d;
-                                    })}
+                                    defaultValue={toDatetimeLocalValue(new Date(new Date(event.date).setHours(Math.floor(event.end / 60), event.end % 60, 0, 0)))}
                                     className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs text-gray-600 focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
                                 />
                                 <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
