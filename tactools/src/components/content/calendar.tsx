@@ -27,6 +27,9 @@ import {
 import { useReducer, useRef, useState, useEffect } from "react";
 import { fetch as tFetch } from "@tauri-apps/plugin-http";
 import ICAL from "ical.js";
+import { defineLanguageFacet } from "@codemirror/language";
+
+type RecurrenceRules = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
 type Event = {
     uid: string;
@@ -38,6 +41,79 @@ type Event = {
     calendarId: number;
     description?: string;
     visible: boolean;
+    recurrence?: RecurrenceRules;
+    recurrenceUntil?: number;
+}
+
+const MAX_RECURRING_OCCURRENCES = 365;
+
+function generateRecurringEvents(
+    baseUid: string,
+    name: string,
+    description: string,
+    startD: Date,
+    endD: Date,
+    calendar: string,
+    calendarId: number,
+    recurrence: RecurrenceRules,
+    recurrenceUntil?: Date
+): Event[] {
+    const startM = startD.getHours() * 60 + startD.getMinutes();
+    const endM = endD.getHours() * 60 + endD.getMinutes();
+
+    if (recurrence === "none") {
+        return [{
+            uid: baseUid,
+            name,
+            description,
+            date: startD.getTime(),
+            start: startM,
+            end: endM,
+            calendar,
+            calendarId,
+            visible: true,
+            recurrence: "none"
+        }];
+    }
+
+    const defaultUntil = new Date(startD);
+    defaultUntil.setFullYear(defaultUntil.getFullYear() + 1);
+    const until = recurrenceUntil && recurrenceUntil.getTime() > startD.getTime() ? recurrenceUntil : defaultUntil;
+
+    const occurrences: Event[] = [];
+    const cursor = new Date(startD);
+    let count = 0;
+
+    while (cursor.getTime() <= until.getTime() && count < MAX_RECURRING_OCCURRENCES) {
+        occurrences.push({
+            uid: `${baseUid}-${cursor.toISOString()}`,
+            name,
+            description,
+            date: cursor.getTime(),
+            start: startM,
+            end: endM,
+            calendar,
+            calendarId,
+            visible: true,
+            recurrence,
+            recurrenceUntil: until.getTime()
+        });
+
+        count++;
+        switch (recurrence) {
+            case "daily": cursor.setDate(cursor.getDate() + 1); break;
+            case "weekly": cursor.setDate(cursor.getDate() + 7); break;
+            case "monthly": cursor.setMonth(cursor.getMonth() + 1); break;
+            case "yearly": cursor.setFullYear(cursor.getFullYear() + 1); break;
+        }
+    }
+
+    return occurrences;
+}
+
+function toDatetimeLocalValue(d: Date): string {
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function Day(
@@ -150,6 +226,10 @@ const NewEvent = (
         forceRefresh: () => void;
     }
 ) => {
+    const [repeat, setRepeat] = useState<RecurrenceRules>("none");
+    const [repeatUntil, setRepeatUntil] = useState<string>("");
+
+
     const [dropdown, setDropdown] = useState<boolean>(false);
     const [dropdownChoice, setDropdownChoice] = useState<"calendar" | "event">("event");
     const [searchDropdown, setSearchDropdown] = useState<boolean>(false);
@@ -182,47 +262,42 @@ const NewEvent = (
 
         const formData = new FormData(formEl);
         if (!formData) return;
-        
+
         const [title, start, end, description, calendar] = [
-            formData.get("title")?.toString(), 
-            formData.get("start")?.toString(), 
-            formData.get("end")?.toString(), 
-            formData.get("description")?.toString(), 
+            formData.get("title")?.toString(),
+            formData.get("start")?.toString(),
+            formData.get("end")?.toString(),
+            formData.get("description")?.toString(),
             formData.get("calendar")?.toString()
         ];
         if (!title || !start || !end || !description || !calendar) return setDropdown(false);
 
         const startD = new Date(start);
         const endD = new Date(end);
-        const startM = startD.getHours() * 60 + startD.getMinutes();
-        const endM = endD.getHours() * 60 + endD.getMinutes();
         const calId = Number(calSearchRef.current.id);
-        
-        const event: Event = {
-            uid: String(events.reduce((max, cur) => Math.max(max, Number(cur.uid || 0)), 0) + 1),
-            name: title,
-            date: startD.getTime(),
-            start: startM,
-            end: endM,
-            calendar: calendar,
-            calendarId: calId,
-            visible: true,
-            description: description
-        };
 
-        setEvents([...events, event]);
+        const baseUid = String(
+            events.reduce((max, cur) => Math.max(max, Number(cur.uid.split("-")[0]) || 0), 0) + 1
+        );
+
+        const untilDate = repeat !== "none" && repeatUntil ? new Date(repeatUntil) : undefined;
+        const newEvents = generateRecurringEvents(baseUid, title, description, startD, endD, calendar, calId, repeat, untilDate);
+
+        setEvents([...events, ...newEvents]);
 
         setCals((prevCals: any) => prevCals.map((cal: any) => {
             if (cal.id === calId) {
-                return { ...cal, events: [...cal.events, event] };
+                return { ...cal, events: [...cal.events, ...newEvents] };
             }
             return cal;
         }));
 
         formEl.reset();
+        setRepeat("none");
+        setRepeatUntil("");
         return setDropdown(false);
     }
-    
+
     const createNewCalendar = (e: React.MouseEvent) => {
         if (!form.current) return;
         const formEl = form.current;
@@ -379,6 +454,37 @@ const NewEvent = (
                                             </AnimatePresence>
                                         </div>
 
+                                        
+                                        <div className="flex flex-col gap-1 mt-2.5">
+                                            <label className="text-xs text-gray-600 flex items-center gap-1">
+                                                <CalendarRange className="w-3.5 h-3.5" /> Repeat
+                                            </label>
+                                            <select
+                                                value={repeat}
+                                                onChange={(e) => setRepeat(e.target.value as RecurrenceRules)}
+                                                className="w-full px-2 py-1 border border-gray-200 rounded-md text-xs text-gray-600 outline-none focus:outline-none focus:bg-gray-100 focus:border-gray-300 hover:cursor-pointer"
+                                            >
+                                                <option value="none">Does not repeat</option>
+                                                <option value="daily">Daily</option>
+                                                <option value="weekly">Weekly</option>
+                                                <option value="monthly">Monthly</option>
+                                                <option value="yearly">Yearly</option>
+                                            </select>
+                                            {
+                                                repeat !== "none" && (
+                                                    <div className="flex flex-row items-center gap-1 mt-1">
+                                                        <p className="text-xs text-gray-600 whitespace-nowrap">Until</p>
+                                                        <input
+                                                            type="date"
+                                                            value={repeatUntil}
+                                                            onChange={(e) => setRepeatUntil(e.target.value)}
+                                                            className="w-full px-2 py-1 border border-gray-200 rounded-md text-xs text-gray-600 outline-none focus:outline-none focus:bg-gray-100 focus:border-gray-300"
+                                                        />
+                                                    </div>
+                                                )
+                                            }
+                                        </div>
+
                                         <Button className="text-xs text-gray-600 -mb-2" name="submit" onClick={createNewEvent}>Submit</Button>
                                         
                                     </form>
@@ -462,6 +568,13 @@ const EventContextMenu = (
         setEventCtxMenu: (val: false | { x: number; y: number; eventId: string; }) => void;
     }
 ) => {
+    const event = events.find((ev) => ev.uid === id);
+    if (!event) return <p className="text-xs text-gray-600">Unknown event.</p>
+    const [repeat, setRepeat] = useState<RecurrenceRules>(event.recurrence || "none");
+    const [repeatUntil, setRepeatUntil] = useState<string>(
+        event.recurrenceUntil ? new Date(event.recurrenceUntil).toISOString().slice(0, 10) : ""
+    );
+
 
     const [confirmDelete, setConfirmDelete] = useState<string>("");
     const [editing, setEditing] = useState<boolean>(false);
@@ -472,8 +585,6 @@ const EventContextMenu = (
     const calSearchRef = useRef<HTMLInputElement | null>(null);
     const filCals = cals.filter((cal: any) => cal?.title?.toLowerCase().includes(input.toLowerCase()));
 
-    const event = events.find((e) => e.uid === id);
-    if (!event) return <p>Unknown event.</p>
 
     const saveEvent = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -484,43 +595,34 @@ const EventContextMenu = (
 
         const formData = new FormData(formEl);
         if (!formData) return;
-        
+
         const [title, start, end, description, calendar] = [
-            formData.get("title")?.toString(), 
-            formData.get("start")?.toString(), 
-            formData.get("end")?.toString(), 
-            formData.get("description")?.toString(), 
+            formData.get("title")?.toString(),
+            formData.get("start")?.toString(),
+            formData.get("end")?.toString(),
+            formData.get("description")?.toString(),
             formData.get("calendar")?.toString()
         ];
         if (!title || !start || !end || !description || !calendar) return setEditing(false);
 
         const startD = new Date(start);
         const endD = new Date(end);
-        const startM = startD.getHours() * 60 + startD.getMinutes();
-        const endM = endD.getHours() * 60 + endD.getMinutes();
         const calId = Number(calSearchRef.current.id);
-        
-        const event: Event = {
-            uid: String(events.reduce((max, cur) => Math.max(max, Number(cur.uid || 0)), 0) + 1),
-            name: title,
-            date: startD.getTime(),
-            start: startM,
-            end: endM,
-            calendar: calendar,
-            calendarId: calId,
-            visible: true,
-            description: description
-        };
 
-        events = events.filter((e) => e.uid !== id);
+        const baseId = id.split("-")[0];
+        const untilDate = repeat !== "none" && repeatUntil ? new Date(repeatUntil) : undefined;
+        const newEvents = generateRecurringEvents(baseId, title, description, startD, endD, calendar, calId, repeat, untilDate);
 
-        setEvents([...events, event]);
+        const isSameSeries = (uid: string) => uid === baseId || uid.startsWith(`${baseId}-`);
+
+        setEvents([...events.filter((e) => !isSameSeries(e.uid)), ...newEvents]);
 
         setCals((prevCals: any) => prevCals.map((cal: any) => {
+            const remaining = cal.events.filter((e: Event) => !isSameSeries(e.uid));
             if (cal.id === calId) {
-                return { ...cal, events: [...cal.events, event] };
+                return { ...cal, events: [...remaining, ...newEvents] };
             }
-            return cal;
+            return { ...cal, events: remaining };
         }));
 
         formEl.reset();
@@ -544,7 +646,7 @@ const EventContextMenu = (
                     <div className="flex flex-col gap-1">
                         <Button onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setEditing(true); return; }} name="Rename"  className="flex flex-row items-center justify-start gap-3 !shadow-none select-none">
                             <Edit className="w-4 h-4 text-gray-600" />
-                            <p className="text-gray-600 text-xs">Rename</p>
+                            <p className="text-gray-600 text-xs">Edit Event</p>
                         </Button>
                         <Button onClick={() => {
                             if (confirmDelete !== "this-occurence") return setConfirmDelete("this-occurence");
@@ -583,7 +685,7 @@ const EventContextMenu = (
                                     type="text" 
                                     name="title" 
                                     placeholder=" " 
-                                    
+                                    defaultValue={event.name}
                                     className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
                                 />
                                 <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
@@ -601,6 +703,7 @@ const EventContextMenu = (
                                     type="datetime-local" 
                                     placeholder=" "
                                     name="start"
+                                    defaultValue={toDatetimeLocalValue(new Date(event.date))}
                                     className="peer w-full h-fit px-2 py-1 text-gray-600 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
                                 />
                                 <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
@@ -618,6 +721,11 @@ const EventContextMenu = (
                                     type="datetime-local" 
                                     placeholder=" "
                                     name="end"
+                                    defaultValue={toDatetimeLocalValue(() => {
+                                        const d = new Date(event.date);
+                                        d.setHours(Math.floor(event.end / 60), event.end % 60, 0, 0);
+                                        return d;
+                                    })}
                                     className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs text-gray-600 focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
                                 />
                                 <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
@@ -634,6 +742,7 @@ const EventContextMenu = (
                                     type="text" 
                                     placeholder=" "
                                     name="description"
+                                    defaultValue={event.description}
                                     className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
                                 />
                                 <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
@@ -698,7 +807,8 @@ const EventContextMenu = (
                                 </AnimatePresence>
                             </div>
 
-                            <Button className="text-xs text-gray-600 mb-2" name="submit" onClick={saveEvent}>Save</Button>
+
+                            <Button className="text-xs text-gray-600 mb-2" name="save" onClick={saveEvent}>Save</Button>
                             
                         </form>
                     </div>
