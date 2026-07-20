@@ -36,6 +36,7 @@ export default function ContextMenu(
         <motion.div
             ref={menuRef}
             tabIndex={0}
+            onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); }}
             onBlur={handleBlur}
             onContextMenu={(e: React.MouseEvent) => { e.preventDefault(); return; }}
             initial={{ opacity: 0, scale: 0 }}

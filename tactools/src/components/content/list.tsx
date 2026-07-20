@@ -96,12 +96,10 @@ function Task(
     };
 
     const getAllDivs = () => {
-        // const sectionIds = listInfo.sections.map((section) => { return section.id });
         const taskIds = listInfo.tasks.map((task) => { return task.id });
         taskIds.push(0);
         const sectTaskIds = listInfo.sections.flatMap((section) => { return [...section.tasks.map((task) => `${section.id}-${task.id}` ), `${section.id}-0`] });
         
-        // const sectionDivs = sectionIds.map((id) => { const el = document.getElementById(`sectiondiv-${id}`); el?.classList.remove("!bg-blue-100/40", "closest"); return el; });
         const taskDivs = taskIds.map((id) => { const el = document.getElementById(`taskdiv-${id}`); el?.classList.remove("!opacity-100", "closest"); return el; });
         const secTaskDivs = sectTaskIds.map((id) => { const el = document.getElementById(`sectiontaskdiv-${id}`); el?.classList.remove("!opacity-100", "closest"); return el; });
 

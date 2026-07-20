@@ -16,7 +16,13 @@ import {
     Hash,
     CalendarRange,
     Clock,
-    TextAlignStart
+    TextAlignStart,
+    Eye,
+    SquarePen,
+    SquareCheck,
+    Square,
+    Edit,
+    Trash2
 } from "lucide-react";
 import { useReducer, useRef, useState, useEffect } from "react";
 import { fetch as tFetch } from "@tauri-apps/plugin-http";
@@ -38,10 +44,12 @@ function Day(
     {
         type,
         events,
+        showEventCtxMenu,
         offsetDate
     }: {
         type: string;
         events: Event[];
+        showEventCtxMenu: (e: React.MouseEvent) => void;
         setEvents: (events: Event[]) => void;
         offsetDate: Date;
     }
@@ -92,6 +100,8 @@ function Day(
                                     key={`event-${event.uid}-${index}`} 
                                     className="absolute left-1 right-1 rounded-md p-1.5 text-xs font-medium bg-gray-100 overflow-hidden" 
                                     style={{top: `${topPercent}%`, height: `${heightPercent}%`}}
+                                    id={`${event.uid}`}
+                                    onContextMenu={(e: React.MouseEvent) => { showEventCtxMenu(e); }}
                                 >
                                     <p className="font-semibold text-gray-600 truncate leading-none">{event.name}</p>
                                     <p className="text-[0.625rem] text-blue-700/80 mt-1">
@@ -125,6 +135,568 @@ function TimeLine() {
     )
 }
 
+const NewEvent = (
+    {
+        events,
+        setEvents,
+        cals,
+        setCals,
+        forceRefresh
+    }: {
+        events: Event[];
+        setEvents: (events: Event[]) => void;
+        cals: any[];
+        setCals: (cal: any) => void;
+        forceRefresh: () => void;
+    }
+) => {
+    const [dropdown, setDropdown] = useState<boolean>(false);
+    const [dropdownChoice, setDropdownChoice] = useState<"calendar" | "event">("event");
+    const [searchDropdown, setSearchDropdown] = useState<boolean>(false);
+    const [input, setInput] = useState<string>("");
+
+    const calSearchRef = useRef<HTMLInputElement | null>(null);
+    const form = useRef<HTMLFormElement | null>(null);
+
+    const filCals = cals.filter((cal: any) => cal?.title?.toLowerCase().includes(input.toLowerCase()));
+
+    useEffect(() => { 
+        const closeSearchDropdown = () => {
+            console.log("closing dropdown...");
+            return setDropdown(false);
+        }
+
+        window.addEventListener("click", closeSearchDropdown);
+        
+        return () => {
+            window.removeEventListener("click", closeSearchDropdown);
+        }
+    }, []);
+
+
+    const createNewEvent = (e: React.MouseEvent) => {
+        e.preventDefault();
+
+        const formEl = form.current;
+        if (!formEl || !calSearchRef.current) return;
+
+        const formData = new FormData(formEl);
+        if (!formData) return;
+        
+        const [title, start, end, description, calendar] = [
+            formData.get("title")?.toString(), 
+            formData.get("start")?.toString(), 
+            formData.get("end")?.toString(), 
+            formData.get("description")?.toString(), 
+            formData.get("calendar")?.toString()
+        ];
+        if (!title || !start || !end || !description || !calendar) return setDropdown(false);
+
+        const startD = new Date(start);
+        const endD = new Date(end);
+        const startM = startD.getHours() * 60 + startD.getMinutes();
+        const endM = endD.getHours() * 60 + endD.getMinutes();
+        const calId = Number(calSearchRef.current.id);
+        
+        const event: Event = {
+            uid: String(events.reduce((max, cur) => Math.max(max, Number(cur.uid || 0)), 0) + 1),
+            name: title,
+            date: startD.getTime(),
+            start: startM,
+            end: endM,
+            calendar: calendar,
+            calendarId: calId,
+            visible: true,
+            description: description
+        };
+
+        setEvents([...events, event]);
+
+        setCals((prevCals: any) => prevCals.map((cal: any) => {
+            if (cal.id === calId) {
+                return { ...cal, events: [...cal.events, event] };
+            }
+            return cal;
+        }));
+
+        formEl.reset();
+        return setDropdown(false);
+    }
+    
+    const createNewCalendar = (e: React.MouseEvent) => {
+        if (!form.current) return;
+        const formEl = form.current;
+        const formData = new FormData(formEl);
+        if (!formData) return;
+
+        const title = formData.get("calendarname")?.toString();
+        if (!title) return;
+
+        const calendar = {
+            importUrl: "",
+            events: [] as Event[],
+            id: cals.reduce((max, cur) => Math.max(max, Number((cur as any).id || 0)), 0) + 1,
+            title: title,
+            visible: true
+        }
+
+        setCals([...cals, calendar]);
+        return setDropdown(false);
+    }
+
+    return (
+        <div className="flex flex-row items-center justify-center relative">
+            <Button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDropdown(!dropdown); }} className="mt-1">
+                <Plus className="text-gray-600 w-4 h-4" />
+            </Button>
+            <AnimatePresence>
+                { dropdown && ( <motion.div initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 100, translateX: 0 }} transition={{ duration: 0.125 }} exit={{ opacity: 0, translateX: -5 }} className="absolute flex flex-col top-full left-0 z-100 bg-gray-100/40 shadow-sm backdrop-blur-md mt-1 rounded-md transition-height duration-200">
+                    <div className="flex flex-row gap-1 justify-around mx-1 px-1 py-1 mt-1 bg-gray-200 rounded-md backdrop-blur-md"> 
+                        <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDropdownChoice("calendar"); }} className={`px-8 py-0.5 rounded-md ${dropdownChoice === "calendar" ? "bg-white/60" : "opacity-20 hover:cursor-pointer hover:bg-white hover:opacity-40 transition-all duration-200"}`} ><LCalendar className="text-gray-500 w-4 h-4" /></div>
+                        <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDropdownChoice("event"); }} className={`px-8 py-0.5 rounded-md ${dropdownChoice === "event" ? "bg-white/60" : "opacity-20 hover:cursor-pointer hover:bg-white hover:opacity-40 transition-all duration-200"}`} ><Pin className="text-gray-500 w-4 h-4" /></div>
+                    </div>
+                    <AnimatePresence>
+                        {
+                            dropdownChoice === "event" ? 
+                                <motion.div onClick={(e) => { e.stopPropagation(); e.preventDefault(); }} className="mt-2 mx-2 mb-4">
+                                    <form ref={form} className="w-full h-full flex flex-col gap-3">
+                                        <div className="flex flex-row mt-1 relative items-center justify-center group">
+                                            <input 
+                                                type="text" 
+                                                name="title" 
+                                                placeholder=" " 
+                                                className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                            />
+                                            <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                            >
+                                                <ALargeSmall className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                <p className="text-xs text-gray-600">Event Title</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-row mt-2.5 relative items-center justify-center group">
+                                            <input 
+                                                type="datetime-local" 
+                                                placeholder=" "
+                                                name="start"
+                                                className="peer w-full h-fit px-2 py-1 text-gray-600 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                            />
+                                            <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                            >
+                                                <Clock className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                <p className="text-xs text-gray-600">Start Date</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-row mt-2.5 relative items-center justify-center group">
+                                            <input 
+                                                type="datetime-local" 
+                                                placeholder=" "
+                                                name="end"
+                                                className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs text-gray-600 focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                            />
+                                            <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                            >
+                                                <Clock className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                <p className="text-xs text-gray-600">End Date</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-row mt-2.5 relative items-center justify-center group">
+                                            <input 
+                                                type="text" 
+                                                placeholder=" "
+                                                name="description"
+                                                className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                            />
+                                            <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                            >
+                                                <TextAlignStart className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                <p className="text-xs text-gray-600">Description</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-row mt-2.5 relative items-center justify-center group mb-24">
+                                            <input 
+                                                ref={calSearchRef} 
+                                                onChange={(e) => { setInput(e.target.value); }} 
+                                                onFocus={() => { setSearchDropdown(true); }} 
+                                                onBlur={() => { setTimeout(() => { setSearchDropdown(false); }, 200)}} 
+                                                type="search" 
+                                                placeholder=" "
+                                                name="calendar"
+                                                id=""
+                                                className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                            />
+                                            <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                            >
+                                                <LCalendar className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                <p className="text-xs text-gray-600">Calendar</p>
+                                            </div>
+                                            <AnimatePresence>
+                                                { searchDropdown &&
+                                                    <motion.div initial={{ opacity: 0, translateY: -5 }} animate={{ opacity: 1, translateY: 0 }} transition={{ duration: 0.2 }} exit={{ opacity: 0, translateY: -5, transition: { duration: 0.125 }}} className="absolute top-full mt-0.5 left-0 bg-gray-100 backdrop-blur-md rounded-md px-2 py-2 shadow-sm w-full h-[calc(100%+4rem)]">
+                                                        <AnimatePresence>
+                                                            {filCals.length === 0 ? (
+                                                                <motion.p 
+                                                                    initial={{ opacity: 0 }} 
+                                                                    animate={{ opacity: 1 }} 
+                                                                    exit={{ opacity: 0 }}
+                                                                    className="text-gray-400 text-xs text-center py-2"
+                                                                >
+                                                                    No calendars found
+                                                                </motion.p>
+                                                            ) : (
+                                                                filCals.map((cal: any) => (
+                                                                    <motion.div 
+                                                                        key={cal.title} 
+                                                                        initial={{ opacity: 0, translateX: -5 }} 
+                                                                        animate={{ opacity: 1, translateX: 0 }} 
+                                                                        transition={{ duration: 0.2, delay: 0.5 }}
+                                                                        className="text-gray-600 text-xs"
+                                                                    >
+                                                                        <Button onClick={() => {if (calSearchRef.current) { calSearchRef.current.focus(); calSearchRef.current.value = cal.title; calSearchRef.current.id = `${cal.id}` } }} name={`${cal.title}`} className="!shadow-none">{ cal.title }</Button>
+                                                                    </motion.div>
+                                                                ))
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </motion.div>
+                                                }
+                                            </AnimatePresence>
+                                        </div>
+
+                                        <Button className="text-xs text-gray-600 -mb-2" name="submit" onClick={createNewEvent}>Submit</Button>
+                                        
+                                    </form>
+                                </motion.div>
+                            :  
+                                <div onClick={(e) => {e.preventDefault(); e.stopPropagation(); }} className="mt-2 mb-4 px-2">
+                                    <form ref={form} className="w-full h-full flex flex-col gap-3">
+                                        <div className="flex flex-row mt-2.5 relative items-center justify-center group">
+                                            <input 
+                                                type="text" 
+                                                placeholder=" "
+                                                name="calendarname"
+                                                className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                            />
+                                            <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                                peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                                peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                                transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                            >
+                                                <TextAlignStart className="w-4 h-4 text-gray-600 mt-0.5" />
+                                                <p className="text-xs text-gray-600">Calendar Name</p>
+                                            </div>
+                                        </div>
+
+                                        <Button className="text-xs text-gray-600 -mb-2" name="submit" onClick={createNewCalendar}>Submit</Button>
+                                    </form>
+                                </div>
+                        }
+                    </AnimatePresence>
+                </motion.div> ) }
+            </AnimatePresence>
+        </div>
+    )
+}
+
+const Import = ({ loadiCal }: { loadiCal: (ical: string) => void; }) => {
+    const [importMenu, setImportMenu] = useState<{ x: number; y: number; } | false>(false);
+    const [importing, setImporting] = useState<string | false>(false);
+
+    const importInput = useRef<HTMLInputElement | null>(null);
+    
+    return (
+        <Button onClick={(e) => { setImportMenu({ x: e.clientX + (e.currentTarget.getBoundingClientRect().x - e.clientX), y: e.clientY - (e.clientY - e.currentTarget.getBoundingClientRect().bottom) + 5 }); }} className="relative">
+            <ImportIcon className="w-4 h-4 text-gray-600" />
+            <AnimatePresence>
+                {
+                    importMenu && (
+                        <ContextMenu x={importMenu.x} y={importMenu.y} onBlur={(e: React.FocusEvent) => { 
+                            setImporting(false);
+                            setImportMenu(false);
+                        }}>
+                            {
+                                importing === "google-calendar" ? <form onSubmit={(e: React.SubmitEvent) => { e.preventDefault(); e.stopPropagation(); const data = new FormData(e.currentTarget as HTMLFormElement).get("ical") as string; loadiCal(data); setImporting(false); return setImportMenu(false); }}><input name="ical" placeholder="Enter iCal link..." ref={importInput} className="outline-none focus:outline-none text-xs" /></form>
+                                : <Button onClick={() => {setImporting("google-calendar"); setTimeout(() => { if (!importInput.current) return; importInput.current.focus(); }, 100)}} className="!shadow-none">
+                                    <p className="text-xs">Import from Google Calendar</p>
+                                </Button>
+                            }
+                        </ContextMenu>
+                    )
+                }
+            </AnimatePresence>
+        </Button>
+    );
+};
+
+
+const EventContextMenu = (
+    {
+        events,
+        setEvents,
+        cals,
+        setCals,
+        id,
+        setEventCtxMenu
+    }: {
+        events: Event[];
+        setEvents: (events: Event[]) => void;
+        cals: any[];
+        setCals: (cals: any) => void;
+        id: string;
+        setEventCtxMenu: (val: false | { x: number; y: number; eventId: string; }) => void;
+    }
+) => {
+
+    const [confirmDelete, setConfirmDelete] = useState<string>("");
+    const [editing, setEditing] = useState<boolean>(false);
+    const [searchDropdown, setSearchDropdown] = useState<boolean>(false);
+    const [input, setInput] = useState<string>("");
+
+    const form = useRef<HTMLFormElement | null>(null);
+    const calSearchRef = useRef<HTMLInputElement | null>(null);
+    const filCals = cals.filter((cal: any) => cal?.title?.toLowerCase().includes(input.toLowerCase()));
+
+    const event = events.find((e) => e.uid === id);
+    if (!event) return <p>Unknown event.</p>
+
+    const saveEvent = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const formEl = form.current;
+        if (!formEl || !calSearchRef.current) return;
+
+        const formData = new FormData(formEl);
+        if (!formData) return;
+        
+        const [title, start, end, description, calendar] = [
+            formData.get("title")?.toString(), 
+            formData.get("start")?.toString(), 
+            formData.get("end")?.toString(), 
+            formData.get("description")?.toString(), 
+            formData.get("calendar")?.toString()
+        ];
+        if (!title || !start || !end || !description || !calendar) return setEditing(false);
+
+        const startD = new Date(start);
+        const endD = new Date(end);
+        const startM = startD.getHours() * 60 + startD.getMinutes();
+        const endM = endD.getHours() * 60 + endD.getMinutes();
+        const calId = Number(calSearchRef.current.id);
+        
+        const event: Event = {
+            uid: String(events.reduce((max, cur) => Math.max(max, Number(cur.uid || 0)), 0) + 1),
+            name: title,
+            date: startD.getTime(),
+            start: startM,
+            end: endM,
+            calendar: calendar,
+            calendarId: calId,
+            visible: true,
+            description: description
+        };
+
+        events = events.filter((e) => e.uid !== id);
+
+        setEvents([...events, event]);
+
+        setCals((prevCals: any) => prevCals.map((cal: any) => {
+            if (cal.id === calId) {
+                return { ...cal, events: [...cal.events, event] };
+            }
+            return cal;
+        }));
+
+        formEl.reset();
+        setEditing(false);
+        setEventCtxMenu(false);
+        return;
+    }
+
+    const eventCal = cals.find((c) => {
+        return c.events.find((e: Event) => e.uid === id) ? c : false;
+    });
+    if (eventCal.importUrl !== "") {
+        return <div>
+            <p className="text-gray-600 text-xs">This event is in a read-only calendar.</p>
+        </div>
+    }
+    return (
+        <div>
+            {
+                !editing ? (
+                    <div className="flex flex-col gap-1">
+                        <Button onClick={(e: React.MouseEvent) => { e.preventDefault(); e.stopPropagation(); setEditing(true); return; }} name="Rename"  className="flex flex-row items-center justify-start gap-3 !shadow-none select-none">
+                            <Edit className="w-4 h-4 text-gray-600" />
+                            <p className="text-gray-600 text-xs">Rename</p>
+                        </Button>
+                        <Button onClick={() => {
+                            if (confirmDelete !== "this-occurence") return setConfirmDelete("this-occurence");
+
+                            return;
+
+                        }} name="Delete"  className={`flex flex-row items-center justify-start gap-3 !shadow-none select-none bg-red-300/30 hover:!bg-red-300/20 ${confirmDelete ? "flash-red" : ""}`}>
+                            <Trash2 className="w-4 h-4 text-red-500/60" />
+                            <p className={`text-red-500/60 text-xs min-w-20`}>{ confirmDelete === "this-occurence" ? "Confirm?" : "Delete this occurence" }</p>
+                        </Button>
+                        <Button onClick={() => {
+                            if (confirmDelete !== "all-occurences") return setConfirmDelete("all-occurences");
+
+                            return;
+
+                        }} name="Delete"  className={`flex flex-row items-center justify-start gap-3 !shadow-none select-none bg-red-300/30 hover:!bg-red-300/20 ${confirmDelete ? "flash-red" : ""}`}>
+                            <Trash2 className="w-4 h-4 text-red-500/60" />
+                            <p className={`text-red-500/60 text-xs min-w-20`}>{ confirmDelete === "all-occurences" ? "Confirm?" : "Delete all occurences" }</p>
+                        </Button>
+                    </div>
+                ) : (
+                    <div>
+                        <form ref={form} className="w-full h-full flex flex-col gap-3">
+                            <div className="flex flex-row mt-1 relative items-center justify-center group">
+                                <input 
+                                    type="text" 
+                                    name="title" 
+                                    placeholder=" " 
+                                    
+                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                />
+                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                >
+                                    <ALargeSmall className="w-4 h-4 text-gray-600 mt-0.5" />
+                                    <p className="text-xs text-gray-600">Event Title</p>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-row mt-2.5 relative items-center justify-center group">
+                                <input 
+                                    type="datetime-local" 
+                                    placeholder=" "
+                                    name="start"
+                                    className="peer w-full h-fit px-2 py-1 text-gray-600 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                />
+                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                >
+                                    <Clock className="w-4 h-4 text-gray-600 mt-0.5" />
+                                    <p className="text-xs text-gray-600">Start Date</p>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-row mt-2.5 relative items-center justify-center group">
+                                <input 
+                                    type="datetime-local" 
+                                    placeholder=" "
+                                    name="end"
+                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs text-gray-600 focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                />
+                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                >
+                                    <Clock className="w-4 h-4 text-gray-600 mt-0.5" />
+                                    <p className="text-xs text-gray-600">End Date</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-row mt-2.5 relative items-center justify-center group">
+                                <input 
+                                    type="text" 
+                                    placeholder=" "
+                                    name="description"
+                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                />
+                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                >
+                                    <TextAlignStart className="w-4 h-4 text-gray-600 mt-0.5" />
+                                    <p className="text-xs text-gray-600">Description</p>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-row mt-2.5 relative items-center justify-center group mb-24">
+                                <input 
+                                    ref={calSearchRef} 
+                                    onChange={(e) => { setInput(e.target.value); }} 
+                                    onFocus={() => { setSearchDropdown(true); }} 
+                                    onBlur={() => { setTimeout(() => { setSearchDropdown(false); }, 200)}} 
+                                    type="search" 
+                                    placeholder=" "
+                                    name="calendar"
+                                    id=""
+                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:bg-gray-100 focus:border-gray-300 transition-all duration-200" 
+                                />
+                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
+                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
+                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
+                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
+                                >
+                                    <LCalendar className="w-4 h-4 text-gray-600 mt-0.5" />
+                                    <p className="text-xs text-gray-600">Calendar</p>
+                                </div>
+                                <AnimatePresence>
+                                    { searchDropdown &&
+                                        <motion.div initial={{ opacity: 0, translateY: -5 }} animate={{ opacity: 1, translateY: 0 }} transition={{ duration: 0.2 }} exit={{ opacity: 0, translateY: -5, transition: { duration: 0.125 }}} className="absolute top-full mt-0.5 left-0 bg-gray-100 backdrop-blur-md rounded-md px-2 py-2 shadow-sm w-full h-[calc(100%+4rem)]">
+                                            <AnimatePresence>
+                                                {filCals.length === 0 ? (
+                                                    <motion.p 
+                                                        initial={{ opacity: 0 }} 
+                                                        animate={{ opacity: 1 }} 
+                                                        exit={{ opacity: 0 }}
+                                                        className="text-gray-400 text-xs text-center py-2"
+                                                    >
+                                                        No calendars found
+                                                    </motion.p>
+                                                ) : (
+                                                    filCals.map((cal: any) => (
+                                                        <motion.div 
+                                                            key={cal.title} 
+                                                            initial={{ opacity: 0, translateX: -5 }} 
+                                                            animate={{ opacity: 1, translateX: 0 }} 
+                                                            transition={{ duration: 0.2, delay: 0.5 }}
+                                                            className="text-gray-600 text-xs"
+                                                        >
+                                                            <Button onClick={() => {if (calSearchRef.current) { calSearchRef.current.focus(); calSearchRef.current.value = cal.title; calSearchRef.current.id = `${cal.id}` } }} name={`${cal.title}`} className="!shadow-none">{ cal.title }</Button>
+                                                        </motion.div>
+                                                    ))
+                                                )}
+                                            </AnimatePresence>
+                                        </motion.div>
+                                    }
+                                </AnimatePresence>
+                            </div>
+
+                            <Button className="text-xs text-gray-600 -mb-2" name="submit" onClick={saveEvent}>Save</Button>
+                            
+                        </form>
+                    </div>
+                )
+            }
+        </div>
+    )
+}
 
 export default function Calendar() {
     const [events, setEvents] = useState<Event[]>(() => {
@@ -136,9 +708,12 @@ export default function Calendar() {
 
         const events: Event[] = [];
         const calendarIds = JSON.parse(loadedCalendars);
-        calendarIds.map((id: string) => { const calendarEvents = localStorage.getItem(`calendar-${id}`); if (!calendarEvents) return; const cEvents = JSON.parse(calendarEvents).events; events.push(...(cEvents.map((e: Event) => { return { ...e, visible: JSON.parse(calendarEvents).visible as boolean } }))); })
-        events.filter((event) => calendarIds.includes(event.calendarId));
-        return events;
+        calendarIds.map((id: string) => { const calendarEvents = localStorage.getItem(`calendar-${id}`); if (!calendarEvents) return; const cEvents = JSON.parse(calendarEvents).events; const calObj = JSON.parse(calendarEvents);
+events.push(...cEvents.map((e: Event) => ({
+  ...e,
+  visible: e.visible && (calObj.visible ?? true),
+}))); })
+        return events.filter((event) => calendarIds.includes(event.calendarId));
     });
 
     const [icalUrls, setIcalUrls] = useState<string[]>(() => {
@@ -168,238 +743,52 @@ export default function Calendar() {
         return getCurMonDate();
     });
 
+    const [cals, setCals] = useState<{events: Event[], importUrl: string, title: string, id: number, visible: boolean}[]>(() => {
+        const calendars = localStorage.getItem("loaded-calendars");
+        if (!calendars) return [];
+        const calendarIds = JSON.parse(calendars);
+        return calendarIds
+            .map((calendarId: string) => {
+                const item = localStorage.getItem(`calendar-${calendarId}`);
+                return item ? JSON.parse(item) : null;
+            })
+            .filter(Boolean);
+    });
+
+    useEffect(() => {
+        const uniqueIds = [...new Set(cals.map((cal) => cal.id))];
+        localStorage.setItem("loaded-calendars", JSON.stringify(uniqueIds));
+        cals.forEach((cal) => localStorage.setItem(`calendar-${cal.id}`, JSON.stringify(cal)));
+    }, [cals]);
 
 
 
 
     const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-    const Import = ({ loadiCal }: { loadiCal: (ical: string) => void; }) => {
-        const [importMenu, setImportMenu] = useState<{ x: number; y: number; } | false>(false);
-        const [importing, setImporting] = useState<string | false>(false);
-
-        const importInput = useRef<HTMLInputElement | null>(null);
-        
-        return (
-            <Button onClick={(e) => { setImportMenu({ x: e.clientX + (e.currentTarget.getBoundingClientRect().x - e.clientX), y: e.clientY - (e.clientY - e.currentTarget.getBoundingClientRect().bottom) + 5 }); }} className="relative">
-                <ImportIcon className="w-4 h-4 text-gray-600" />
-                <AnimatePresence>
-                    {
-                        importMenu && (
-                            <ContextMenu x={importMenu.x} y={importMenu.y} onBlur={(e: React.FocusEvent) => { 
-                                setImporting(false);
-                                setImportMenu(false);
-                            }}>
-                                {
-                                    importing === "google-calendar" ? <form onSubmit={(e: React.SubmitEvent) => { e.preventDefault(); e.stopPropagation(); const data = new FormData(e.currentTarget as HTMLFormElement).get("ical") as string; loadiCal(data); setImporting(false); return setImportMenu(false); }}><input name="ical" placeholder="Enter iCal link..." ref={importInput} className="outline-none focus:outline-none text-xs" /></form>
-                                    : <Button onClick={() => {setImporting("google-calendar"); setTimeout(() => { if (!importInput.current) return; importInput.current.focus(); }, 100)}} className="!shadow-none">
-                                        <p className="text-xs">Import from Google Calendar</p>
-                                    </Button>
-                                }
-                            </ContextMenu>
-                        )
-                    }
-                </AnimatePresence>
-            </Button>
-        );
-    };
+    
 
 
-    const NewEvent = () => {
-        const [dropdown, setDropdown] = useState<boolean>(false);
-        const [dropdownChoice, setDropdownChoice] = useState<"calendar" | "event">("event");
-        const [searchDropdown, setSearchDropdown] = useState<boolean>(false);
-        const [input, setInput] = useState<string>("");
-
-        const [cals, setCals] = useState<{events: Event[], importUrl: string, title: string}[]>(() => {
-            const calendars = localStorage.getItem("loaded-calendars");
-            if (!calendars) return [];
-
-            const calendarIds = JSON.parse(calendars);
-            return calendarIds
-                .map((calendarId: string) => {
-                    const item = localStorage.getItem(`calendar-${calendarId}`);
-                    return item ? JSON.parse(item) : null;
-                })
-                .filter(Boolean);
-        });
-        const calSearchRef = useRef<HTMLInputElement | null>(null);
-
-        const filCals = cals.filter((cal: any) => cal?.title?.toLowerCase().includes(input.toLowerCase()));
-
-        return (
-            <div className="flex flex-row items-center justify-center relative">
-                <Button onClick={() => { setDropdown(!dropdown); }} className="mt-1">
-                    <Plus className="text-gray-600 w-4 h-4" />
-                </Button>
-                <AnimatePresence>
-                    { dropdown && ( <motion.div initial={{ opacity: 0, translateX: -5 }} animate={{ opacity: 100, translateX: 0 }} transition={{ duration: 0.125 }} exit={{ opacity: 0, translateX: -5 }} className="absolute flex flex-col top-full left-0 z-100 bg-gray-100/40 shadow-sm backdrop-blur-md mt-1 rounded-md transition-height duration-200">
-                        <div className="flex flex-row gap-1 justify-around mx-1 px-1 py-1 mt-1 bg-gray-200 rounded-md backdrop-blur-md"> 
-                            <div onClick={() => { setDropdownChoice("calendar"); }} className={`px-8 py-0.5 rounded-md ${dropdownChoice === "calendar" ? "bg-white/60" : "opacity-20 hover:cursor-pointer hover:bg-white hover:opacity-40 transition-all duration-200"}`} ><LCalendar className="text-gray-500 w-4 h-4" /></div>
-                            <div onClick={() => { setDropdownChoice("event"); }} className={`px-8 py-0.5 rounded-md ${dropdownChoice === "event" ? "bg-white/60" : "opacity-20 hover:cursor-pointer hover:bg-white hover:opacity-40 transition-all duration-200"}`} ><Pin className="text-gray-500 w-4 h-4" /></div>
-                        </div>
-                        <AnimatePresence>
-                            {
-                                dropdownChoice === "event" ? 
-                                    <motion.div className="mt-2 mx-2 mb-4">
-                                        <form className="w-full h-full flex flex-col gap-3">
-                                            <div className="flex flex-row mt-1 relative items-center justify-center group">
-                                                <input 
-                                                    type="text" 
-                                                    name="title" 
-                                                    placeholder=" " 
-                                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:border-gray-300 transition-all duration-200" 
-                                                />
-                                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
-                                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
-                                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
-                                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
-                                                >
-                                                    <ALargeSmall className="w-4 h-4 text-gray-600 mt-0.5" />
-                                                    <p className="text-xs text-gray-600">Event Title</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-row mt-2.5 relative items-center justify-center group">
-                                                <input 
-                                                    type="date" 
-                                                    placeholder=" "
-                                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:border-gray-300 transition-all duration-200" 
-                                                />
-                                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
-                                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
-                                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
-                                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
-                                                >
-                                                    <Clock className="w-4 h-4 text-gray-600 mt-0.5" />
-                                                    <p className="text-xs text-gray-600">Start Date</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-row mt-2.5 relative items-center justify-center group">
-                                                <input 
-                                                    type="date" 
-                                                    placeholder=" "
-                                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:border-gray-300 transition-all duration-200" 
-                                                />
-                                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
-                                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
-                                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
-                                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
-                                                >
-                                                    <Clock className="w-4 h-4 text-gray-600 mt-0.5" />
-                                                    <p className="text-xs text-gray-600">End Date</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex flex-row mt-2.5 relative items-center justify-center group">
-                                                <input 
-                                                    type="text" 
-                                                    placeholder=" "
-                                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:border-gray-300 transition-all duration-200" 
-                                                />
-                                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
-                                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
-                                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
-                                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
-                                                >
-                                                    <TextAlignStart className="w-4 h-4 text-gray-600 mt-0.5" />
-                                                    <p className="text-xs text-gray-600">Description</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-row mt-2.5 relative items-center justify-center group mb-24">
-                                                <input 
-                                                    ref={calSearchRef} 
-                                                    onChange={(e) => { setInput(e.target.value); }} 
-                                                    onFocus={() => { setSearchDropdown(true); }} 
-                                                    onBlur={() => { setTimeout(() => { setSearchDropdown(false); }, 200)}} 
-                                                    type="search" 
-                                                    placeholder=" "
-                                                    className="peer w-full h-fit px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none outline-none focus:border-gray-300 transition-all duration-200" 
-                                                />
-                                                <div className="w-fit h-fit absolute top-0.5 left-0 flex flex-row gap-1 items-center ml-2 pointer-events-none select-none 
-                                                    peer-focus:-mt-3.5 peer-focus:-ml-0 peer-focus:scale-80 
-                                                    peer-not-placeholder-shown:-mt-3.5 peer-not-placeholder-shown:-ml-0 peer-not-placeholder-shown:scale-80 
-                                                    transition-all duration-200 bg-gray-100 rounded-md px-1 py-0.5"
-                                                >
-                                                    <LCalendar className="w-4 h-4 text-gray-600 mt-0.5" />
-                                                    <p className="text-xs text-gray-600">Calendar</p>
-                                                </div>
-                                                <AnimatePresence>
-                                                    { searchDropdown &&
-                                                        <motion.div initial={{ opacity: 0, translateY: -5 }} animate={{ opacity: 1, translateY: 0 }} transition={{ duration: 0.2 }} exit={{ opacity: 0, translateY: -5, transition: { duration: 0.125 }}} className="absolute top-full mt-0.5 left-0 bg-gray-100 backdrop-blur-md rounded-md px-2 py-2 shadow-sm w-full h-[calc(100%+4rem)]">
-                                                            <AnimatePresence>
-                                                                {filCals.length === 0 ? (
-                                                                    <motion.p 
-                                                                        initial={{ opacity: 0 }} 
-                                                                        animate={{ opacity: 1 }} 
-                                                                        exit={{ opacity: 0 }}
-                                                                        className="text-gray-400 text-xs text-center py-2"
-                                                                    >
-                                                                        No calendars found
-                                                                    </motion.p>
-                                                                ) : (
-                                                                    filCals.map((cal: any) => (
-                                                                        <motion.div 
-                                                                            key={cal.title} 
-                                                                            initial={{ opacity: 0, translateX: -5 }} 
-                                                                            animate={{ opacity: 1, translateX: 0 }} 
-                                                                            transition={{ duration: 0.2, delay: 0.5 }}
-                                                                            className="text-gray-600 text-xs"
-                                                                        >
-                                                                            <Button onClick={() => {if (calSearchRef.current) { calSearchRef.current.value = cal.title; calSearchRef.current.focus(); } }} name={`${cal.title}`} className="!shadow-none">{ cal.title }</Button>
-                                                                        </motion.div>
-                                                                    ))
-                                                                )}
-                                                            </AnimatePresence>
-                                                        </motion.div>
-                                                    }
-                                                </AnimatePresence>
-                                            </div>
-
-                                            <Button className="text-xs text-gray-600 -mb-2" name="submit">Submit</Button>
-                                            
-                                        </form>
-                                    </motion.div>
-                                :  
-                                    <div>
-
-                                    </div>
-                            }
-                        </AnimatePresence>
-                    </motion.div> ) }
-                </AnimatePresence>
-            </div>
-        )
-    }
+    
 
     useEffect(() => {
         let m = true;
         
         const fetchAllCalendars = async () => {
-            // console.log(`[iCal Loader]: Begun fetchAllCalendars`);
-
             const events: Event[] = [];
-            const cals: string[] = JSON.parse(localStorage.getItem("loaded-calendars") || "[]");
+            const importedCalendars: {events: Event[], importUrl: string, importLink: string, title: string, id: number, visible: boolean}[] = [];
 
             for (const url of icalUrls) {
-                // console.log(`[iCal Loader]: Loading url ${url}`);
                 const response = await tFetch(url);
-                if (!response.ok) {console.warn(`[iCal Loader]: Invalid network response (${response.status}) on ${url}.`); continue; };
+                if (!response.ok) { console.warn(`[iCal Loader]: Invalid network response (${response.status}) on ${url}.`); continue; }
 
                 const raw = await response.text();
-
                 const jcal = ICAL.parse(raw);
                 const comp = new ICAL.Component(jcal);
                 const vevents = comp.getAllSubcomponents('vevent');
 
-                // console.log(`[iCal Loader]: Loaded events using parser.`);
-
-
                 const calName = comp.getFirstPropertyValue("x-wr-calname") || "Imported";
                 const generatedId = Math.abs(url.split("").reduce((a, b) => (((a << 5) - a) + b.charCodeAt(0)) | 0, 0));
-
-                // console.log(`[iCal Loader]: Calendar properties loaded`);
 
                 const now = new Date();
                 const rangeStart = new Date(now); rangeStart.setDate(now.getDate() - 60);
@@ -445,25 +834,37 @@ export default function Calendar() {
                         });
                     }
                 }
+
                 events.push(...pEvents);
-                localStorage.setItem(`calendar-${generatedId}`, JSON.stringify({ importLink: url, events: [...pEvents], visible: true, title: calName as string }));
 
-                // console.log(`[iCal Loader]: Pushed calendar properties to local storage.`);
-
-                if (!cals.includes(String(generatedId))) {
-                    cals.push(String(generatedId));
-                };
-            };
+                const calendarObj = { id: generatedId, importLink: url, importUrl: url, events: pEvents, visible: true, title: calName as string };
+                localStorage.setItem(`calendar-${generatedId}`, JSON.stringify(calendarObj));
+                importedCalendars.push(calendarObj);
+            }
 
             if (m) {
-                // console.log(`[iCal Loader]: Component mounted. Saving calendars to local storage.`);
-                localStorage.setItem("loaded-calendars", JSON.stringify(cals));
-                setEvents(events);
+                setCals(prevCals => {
+                    const map = new Map(prevCals.map(c => [c.id, c]));
+                    importedCalendars.forEach(c => map.set(c.id, c));
+                    return Array.from(map.values());
+                });
+
+                const allLocalEvents: Event[] = [];
+                const allIds = new Set([...cals.map(c => c.id), ...importedCalendars.map(c => c.id)]);
+                allIds.forEach((id) => {
+                    const item = localStorage.getItem(`calendar-${id}`);
+                    if (!item) return;
+                    const parsed = JSON.parse(item);
+                    if (!icalUrls.includes(parsed.importLink)) {
+                        allLocalEvents.push(...parsed.events);
+                    }
+                });
+
+                setEvents([...events, ...allLocalEvents]);
             }
         };
 
         fetchAllCalendars();
-
         const interval = setInterval(fetchAllCalendars, 5 * 60 * 1000);
 
         return () => {
@@ -499,17 +900,29 @@ export default function Calendar() {
         forceRefresh();
     };
 
+    const [infoCtxMenu, setInfoCtxMenu] = useState<{ x: number; y: number; } | false>(false);
+    const [eventCtxMenu, setEventCtxMenu] = useState<{ x: number; y: number; eventId: string } | false>(false);
+
+    const showEventCtxMenu = (e: React.MouseEvent) => { 
+        e.preventDefault();
+        e.stopPropagation();
+
+        setEventCtxMenu({ x: e.clientX, y: e.clientY, eventId: e.currentTarget.id });
+        setInfoCtxMenu(false);
+        return;
+    }
+
     return (
-        <div className="flex flex-row w-full h-full gap-0.5 px-4 my-4">
+        <div onClick={() => { setInfoCtxMenu(false); setEventCtxMenu(false); }} onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setInfoCtxMenu({ x: e.clientX, y: e.clientY }); setEventCtxMenu(false); }} className="flex flex-row w-full h-full gap-0.5 px-4 my-4">
             <div className="flex flex-col h-full pr-2 items-center gap-1">
-                <NewEvent />
+                <NewEvent events={events} setEvents={setEvents} cals={cals} setCals={setCals} forceRefresh={forceRefresh} />
                 <Import loadiCal={loadiCal} />
                 <TimeLine />
             </div>
             <div className="flex flex-row relative w-full justify-between">
                 {
                     days.map((day, index) => 
-                        <Day key={index} type={day} events={events} setEvents={setEvents} offsetDate={monDate} />
+                        <Day key={index} type={day} events={events} setEvents={setEvents} showEventCtxMenu={showEventCtxMenu} offsetDate={monDate} />
                     )
                 }
                 <div className="absolute flex flex-row gap-1 -top-0.5 right-1">
@@ -521,6 +934,63 @@ export default function Calendar() {
                     </Button>
                 </div>
             </div>
+            <AnimatePresence>
+                {
+                    (eventCtxMenu || infoCtxMenu) && (
+                        <ContextMenu x={eventCtxMenu ? eventCtxMenu.x : (infoCtxMenu as { x: number; y: number; }).x} y={eventCtxMenu ? eventCtxMenu.y : (infoCtxMenu as { x: number; y: number; }).y} onBlur={() => { setEventCtxMenu(false); setInfoCtxMenu(false); }}>
+                            {
+                                eventCtxMenu ? (
+                                    <div>
+                                        <EventContextMenu setEventCtxMenu={setEventCtxMenu} events={events} setEvents={setEvents} cals={cals} setCals={setCals} id={eventCtxMenu.eventId} />
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-sm text-gray-600 font-semibold">Calendars</p>
+                                        {
+                                            cals.map((cal) => {
+                                                return (
+                                                    <div className="flex flex-row items-center justify-between gap-3">
+                                                        <div className="flex flex-row items-center gap-1">
+                                                            {
+                                                                cal.visible ? (
+                                                                    <SquareCheck onClick={(e: React.MouseEvent) => {
+                                                                        const calendars = [...cals.map((c) => { c.id === cal.id ? c.visible = false : null; return c })];
+                                                                        const evs = [...events.map((e) => { e.calendarId === cal.id ? e.visible = false : null; return e })];
+                                                                        setEvents(evs);
+                                                                        setCals(calendars);
+                                                                        return;
+
+                                                                    }} className="w-4 h-4 text-gray-600 hover:cursor-pointer hover:text-blue-400/80 transition-all duration-200" />
+                                                                ) : (
+                                                                    <Square onClick={(e: React.MouseEvent) => {
+                                                                        const calendars = [...cals.map((c) => { c.id === cal.id ? c.visible = true : null; return c })];
+                                                                        const evs = [...events.map((e) => { e.calendarId === cal.id ? e.visible = true : null; return e })];
+                                                                        setEvents(evs);
+                                                                        setCals(calendars);
+                                                                        return;
+                                                                    }} className="w-4 h-4 text-gray-600 hover:cursor-pointer hover:text-blue-600/80 transition-all duration-200" />
+                                                                )
+                                                            }
+                                                            <p className="text-gray-600 text-sm">{ cal.title }</p>
+                                                        </div>
+                                                        {
+                                                            cal.importUrl !== "" ? (
+                                                                <Eye className="text-gray-600/20 w-4 h-4" />
+                                                            ) : (
+                                                                <SquarePen className="text-gray-600/20 w-4 h-4" />
+                                                            )
+                                                        }
+                                                    </div>
+                                                )
+                                            })
+                                        }
+                                    </div>
+                                )
+                            }
+                        </ContextMenu>
+                    )
+                }        
+            </AnimatePresence>
         </div>
     )
 }
