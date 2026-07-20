@@ -549,6 +549,11 @@ const EventContextMenu = (
                         <Button onClick={() => {
                             if (confirmDelete !== "this-occurence") return setConfirmDelete("this-occurence");
 
+                            const evs = events.filter((e) => e.uid !== id);
+                            const calendars = cals.map((cal) => { return { ...cal, events: [...cal.events.filter((e: Event) => e.uid !== id)] }});
+                            setEvents(evs);
+                            setCals(calendars);
+                            setEventCtxMenu(false);
                             return;
 
                         }} name="Delete"  className={`flex flex-row items-center justify-start gap-3 !shadow-none select-none bg-red-300/30 hover:!bg-red-300/20 ${confirmDelete ? "flash-red" : ""}`}>
@@ -558,6 +563,11 @@ const EventContextMenu = (
                         <Button onClick={() => {
                             if (confirmDelete !== "all-occurences") return setConfirmDelete("all-occurences");
 
+                            const evs = events.filter((e) => !e.uid.includes(id.split("-")[0]));
+                            const calendars = cals.map((cal) => { return { ...cal, events: [...cal.events.filter((e: Event) => !e.uid.includes(id.split("-")[0]))] }});
+                            setEvents(evs);
+                            setCals(calendars);
+                            setEventCtxMenu(false);
                             return;
 
                         }} name="Delete"  className={`flex flex-row items-center justify-start gap-3 !shadow-none select-none bg-red-300/30 hover:!bg-red-300/20 ${confirmDelete ? "flash-red" : ""}`}>
@@ -688,7 +698,7 @@ const EventContextMenu = (
                                 </AnimatePresence>
                             </div>
 
-                            <Button className="text-xs text-gray-600 -mb-2" name="submit" onClick={saveEvent}>Save</Button>
+                            <Button className="text-xs text-gray-600 mb-2" name="submit" onClick={saveEvent}>Save</Button>
                             
                         </form>
                     </div>
