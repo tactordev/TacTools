@@ -665,7 +665,7 @@ const EventContextMenu = (
                         <Button onClick={() => {
                             if (confirmDelete !== "all-occurences") return setConfirmDelete("all-occurences");
 
-                            const evs = events.filter((e) => !e.uid.includes(id.split("-")[0]));
+                            const evs = events.filter((e) => e.uid.split("-")[0] !== (id.split("-")[0]));
                             const calendars = cals.map((cal) => { return { ...cal, events: [...cal.events.filter((e: Event) => !e.uid.includes(id.split("-")[0]))] }});
                             setEvents(evs);
                             setCals(calendars);
