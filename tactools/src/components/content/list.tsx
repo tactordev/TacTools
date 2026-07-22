@@ -17,6 +17,7 @@ import Calendar from "./calendar";
 import { nlu } from "../utils/nlu";
 import ContextMenu from "../utils/context-menu";
 import Overview from "./overview";
+import TaskInput from "../utils/task-input";
 
 export type Task = {
     id: number;
@@ -70,7 +71,7 @@ function Task(
         changeName: (e: React.SubmitEvent<HTMLFormElement> | any) => void;
         initLoad: boolean;
         setListInfo: (listInfo: List) => void;
-        setEditing: (editing: { type: string; id: number; }) => void;
+        setEditing: (editing: { type: string; id: number; } | false) => void;
         listInfo: List;
     }
 ) {
@@ -227,20 +228,26 @@ function Task(
                 <div  className="ml-2 flex flex-row relative items-center justify-center w-fit h-fit">
                     <Circle className="flex flex-row items-center justify-center text-gray-600/40 w-4 h-4" />
                     <Check className="text-gray-600/40 w-3 h-3 absolute opacity-0 group-hover:opacity-100 transition-all duration-200" />
-                    <div className="absolute w-full h-full p-4" onClick={ () => { removeTask(task.id); } } />
+                    <div
+                        className="absolute w-6 h-6 -m-1"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => { removeTask(task.id); }}
+                    />
                 </div>
                 {
                     editing && editing.type === "task" && editing.id === task.id ? 
                     (
-                        <form onClick={(e) => { e.preventDefault(); }} className="flex flex-row items-center" id={`form-${task.id}`} onSubmit={ changeName } onBlur={ changeName } >
-                            <input className="focus:outline-none text-sm text-gray-600 placeholder-text-gray-500/60 my-0.5" spellCheck={false} defaultValue={task.name} name="newName" type="text" autoComplete="off" />
+                        <form onClick={(e) => { e.preventDefault(); }} className="flex flex-row items-center" id={`form-${task.id}`} onSubmit={ changeName } onBlur={ changeName } onKeyDown={(e) => { if (e.key === "Escape") setEditing(false); }}>
+                            <TaskInput name="newName" defaultValue={task.name} autoFocus placeholder="Task name..." />
                         </form>
                     )
-                    : <div className="flex flex-row w-full justify-between pr-2">
+                    : <div className="flex flex-row w-full justify-between items-center pr-2">
                         <p className="text-gray-600 text-sm">{ task.name }</p>
-                        <p className="text-xs text-gray-500/70">
-                            {new Date(task.due!).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                        </p>
+                        {task.due && (
+                            <p className={`text-xs ml-1 ${new Date(task.due) < new Date() ? "text-red-400" : "text-gray-400"}`}>
+                                {new Date(task.due).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                            </p>
+                        )}
                     </div>
                 }
             </Button>
