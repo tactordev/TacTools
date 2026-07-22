@@ -116,12 +116,19 @@ export default function StudyTracker() {
             });
         };
         const curEvs = JSON.parse(calNeeded).events;
+
+        const startObj = new Date(start || Date.now());
+        const endObj = new Date();
+
+        const startMin = startObj.getHours() * 60 + startObj.getMinutes();
+        const endMin = endObj.getHours() * 60 + endObj.getMinutes();
+
         const newEv = {
             uid: `${curSessionType.id}-${start}`,
             name: `${curSessionType.name} Session`,
-            date: new Date().getTime(),
-            start: start,
-            end: new Date().getTime(),
+            date: startObj.getTime(),
+            start: startMin,
+            end: Math.max(endMin, startMin + 1),
             calendar: JSON.parse(calNeeded).title,
             calendarId: JSON.parse(calNeeded).id,
             visible: JSON.parse(calNeeded).visible

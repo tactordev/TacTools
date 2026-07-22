@@ -909,7 +909,7 @@ export default function Calendar() {
         return () => {
             clearInterval(eventCheckInt);
         };
-    });
+    }, []);
 
 
 
