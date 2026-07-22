@@ -30,7 +30,7 @@ import ICAL from "ical.js";
 
 type RecurrenceRules = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
-type Event = {
+export type Event = {
     uid: string;
     name: string;
     date: number;
@@ -823,11 +823,17 @@ export default function Calendar() {
 
         const events: Event[] = [];
         const calendarIds = JSON.parse(loadedCalendars);
-        calendarIds.map((id: string) => { const calendarEvents = localStorage.getItem(`calendar-${id}`); if (!calendarEvents) return; const cEvents = JSON.parse(calendarEvents).events; const calObj = JSON.parse(calendarEvents);
-events.push(...cEvents.map((e: Event) => ({
-  ...e,
-  visible: e.visible && (calObj.visible ?? true),
-}))); })
+        calendarIds.map((id: string) => {
+            const calendarEvents = localStorage.getItem(`calendar-${id}`);
+            if (!calendarEvents) return;
+            
+            const cEvents = JSON.parse(calendarEvents).events;
+            const calObj = JSON.parse(calendarEvents);
+            events.push(...cEvents.map((e: Event) => ({
+                ...e,
+                visible: e.visible && (calObj.visible ?? true),
+            })));
+        });
         return events.filter((event) => calendarIds.includes(event.calendarId));
     });
 
@@ -875,6 +881,35 @@ events.push(...cEvents.map((e: Event) => ({
         localStorage.setItem("loaded-calendars", JSON.stringify(uniqueIds));
         cals.forEach((cal) => localStorage.setItem(`calendar-${cal.id}`, JSON.stringify(cal)));
     }, [cals]);
+
+    useEffect(() => {
+        const eventCheckInt = setInterval(() => {
+            const loadedCalendars = localStorage.getItem("loaded-calendars");
+            if (!loadedCalendars) {
+                localStorage.setItem("loaded-calendars", JSON.stringify([]));
+                return [];
+            }
+
+            const events: Event[] = [];
+            const calendarIds = JSON.parse(loadedCalendars);
+            calendarIds.map((id: string) => {
+                const calendarEvents = localStorage.getItem(`calendar-${id}`);
+                if (!calendarEvents) return;
+                
+                const cEvents = JSON.parse(calendarEvents).events;
+                const calObj = JSON.parse(calendarEvents);
+                events.push(...cEvents.map((e: Event) => ({
+                    ...e,
+                    visible: e.visible && (calObj.visible ?? true),
+                })));
+            });
+            return setEvents(events.filter((event) => calendarIds.includes(event.calendarId)));
+        }, 1000);
+
+        return () => {
+            clearInterval(eventCheckInt);
+        };
+    });
 
 
 
@@ -1064,7 +1099,7 @@ events.push(...cEvents.map((e: Event) => ({
                                         {
                                             cals.map((cal) => {
                                                 return (
-                                                    <div className="flex flex-row items-center justify-between gap-3">
+                                                    <div key={cal.id} className="flex flex-row items-center justify-between gap-3">
                                                         <div className="flex flex-row items-center gap-1">
                                                             {
                                                                 cal.visible ? (

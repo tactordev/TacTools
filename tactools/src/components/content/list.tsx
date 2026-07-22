@@ -18,6 +18,7 @@ import { nlu } from "../utils/nlu";
 import ContextMenu from "../utils/context-menu";
 import Overview from "./overview";
 import TaskInput from "../utils/task-input";
+import StudyTracker from "./study-tracker";
 
 export type Task = {
     id: number;
@@ -290,6 +291,10 @@ export default function List({ tab, tabs, setTabs }: { tab: Tab; tabs: Tab[], se
             return (
                 <Calendar />
             );
+        case "study tracker":
+            return (
+                <StudyTracker />
+            )
     }
 
 
