@@ -34,16 +34,16 @@ export const TimerContext = createContext<TimerContextType | undefined>(undefine
 
 export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [sessionRunning, setSessionRunning] = useState<boolean>(() => {
-        return localStorage.getItem("timer_running") === "true";
+        return localStorage.getItem("timer-running") === "true";
     });
 
     const [start, setStart] = useState<number>(() => {
-        const saved = localStorage.getItem("timer_start");
+        const saved = localStorage.getItem("timer-start");
         return saved ? Number(saved) : 0;
     });
 
     const [curSessionType, setCurSessionType] = useState<SessionType | null>(() => {
-        const saved = localStorage.getItem("timer_cur_type");
+        const saved = localStorage.getItem("timer-cur-type");
         return saved ? JSON.parse(saved) : null;
     });
 
@@ -51,7 +51,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     useEffect(() => {
         if (curSessionType) {
-            localStorage.setItem("timer_cur_type", JSON.stringify(curSessionType));
+            localStorage.setItem("timer-cur-type", JSON.stringify(curSessionType));
         }
     }, [curSessionType]);
 
@@ -98,6 +98,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 events: [] as Event[],
                 title: `${curType.name.toLowerCase()}-${curType.id}`,
                 visible: true,
+                id: max
             });
         }
 
@@ -115,7 +116,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             start: startMin,
             end: Math.max(endMin, startMin + 1),
             calendar: JSON.parse(calNeeded).title,
-            calendarId: JSON.parse(calNeeded).id,
+            calendarId: id,
             visible: JSON.parse(calNeeded).visible,
         } as Event;
 
@@ -125,6 +126,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             JSON.stringify({
                 importUrl: JSON.parse(calNeeded).importUrl,
                 events: newEvs,
+                id: id,
                 title: JSON.parse(calNeeded).title,
                 visible: JSON.parse(calNeeded).visible,
             })
@@ -136,15 +138,15 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const now = Date.now();
             setStart(now);
             setSessionRunning(true);
-            localStorage.setItem("timer_start", now.toString());
-            localStorage.setItem("timer_running", "true");
+            localStorage.setItem("timer-start", now.toString());
+            localStorage.setItem("timer-running", "true");
 
             if (curSessionType) {
                 saveToEvent(now, curSessionType);
             }
         } else {
             setSessionRunning(false);
-            localStorage.setItem("timer_running", "false");
+            localStorage.setItem("timer-running", "false");
         }
     };
 
@@ -183,8 +185,8 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setSessionRunning(false);
         setStart(0);
         setSessionTime("00:00.00");
-        localStorage.setItem("timer_running", "false");
-        localStorage.removeItem("timer_start");
+        localStorage.setItem("timer-running", "false");
+        localStorage.removeItem("timer-start");
     };
 
     return (
