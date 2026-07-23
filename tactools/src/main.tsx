@@ -7,16 +7,15 @@ import Content from "./components/content/content";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import "./globals.css";
 
-
 export type FileTabVal = {
   fileExt: string;
   icon: React.ReactNode;
   path: string;
-}
+};
 
 type PlanningTabVal = {
   icon: React.ReactNode;
-}
+};
 
 export type Tab = {
   type: "file" | "planning-list";
@@ -25,20 +24,18 @@ export type Tab = {
   id: number;
   locatorId?: string;
   value: FileTabVal | PlanningTabVal;
-}
+};
 
 function App() {
   const [tabs, setTabs] = useState<Tab[]>([]);
-  
+
   const removeActiveTab = () => {
-    console.log("\n\n\n-------- CTRL + W --------\n");
     console.log(tabs);
     let newTabs = tabs.filter((tab) => !tab.active);
     console.log(newTabs);
     const newActive = { ...newTabs[0], active: true } as Tab;
     if (newTabs.length > 0) newTabs.splice(0, 1, newActive);
     console.log(newTabs);
-    console.log("\n-------- END --------\n\n")
     return setTabs(newTabs);
   };
 
@@ -50,11 +47,14 @@ function App() {
     if (index === tabs.length - 1) incrementedIndex = 0;
     const newTabs = [...tabs];
     newTabs.splice(index, 1, { ...tabs[index], active: false });
-    newTabs.splice(incrementedIndex, 1, { ...tabs[incrementedIndex], active: true });
-    
+    newTabs.splice(incrementedIndex, 1, {
+      ...tabs[incrementedIndex],
+      active: true,
+    });
+
     setTabs(newTabs);
     return;
-  }
+  };
 
   const cycleBackward = () => {
     if (tabs.length <= 1) return;
@@ -64,13 +64,16 @@ function App() {
     if (index === 0) decrementedIndex = tabs.length - 1;
     const newTabs = [...tabs];
     newTabs.splice(index, 1, { ...tabs[index], active: false });
-    newTabs.splice(decrementedIndex, 1, { ...tabs[decrementedIndex], active: true });
+    newTabs.splice(decrementedIndex, 1, {
+      ...tabs[decrementedIndex],
+      active: true,
+    });
 
     setTabs(newTabs);
     return;
-  }
+  };
 
-  useHotkey("Mod+W", removeActiveTab)
+  useHotkey("Mod+W", removeActiveTab);
   useHotkey("Mod+Tab", cycleForward);
   useHotkey("Mod+Shift+Tab", cycleBackward);
 
@@ -87,8 +90,6 @@ function App() {
   );
 }
 
-
-
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <App />
+  <App />,
 );

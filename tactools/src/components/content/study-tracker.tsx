@@ -33,7 +33,7 @@ export default function StudyTracker() {
   } = useTimer();
 
   const [page, setPage] = useState<"overview" | "session">(
-    sessionRunning ? "session" : "overview"
+    sessionRunning ? "session" : "overview",
   );
   const [sessions, setSessions] = useState(() => {
     const sess = localStorage.getItem("prev-sessions");
@@ -57,9 +57,16 @@ export default function StudyTracker() {
     return parsed;
   });
 
-  const [editing, setEditing] = useState<{ type: string; id: number } | false>(false);
-  const [time, setTime] = useState(`${new Date().getHours()}`.padStart(2, "0") + `:${new Date().getMinutes()}`.padStart(2, "0") + `.${new Date().getSeconds()}`.padStart(2, "0"));
-  const [sessionTypeDropdown, setSessionTypeDropdown] = useState<boolean>(false);
+  const [editing, setEditing] = useState<{ type: string; id: number } | false>(
+    false,
+  );
+  const [time, setTime] = useState(
+    `${new Date().getHours()}`.padStart(2, "0") +
+      `:${new Date().getMinutes()}`.padStart(2, "0") +
+      `.${new Date().getSeconds()}`.padStart(2, "0"),
+  );
+  const [sessionTypeDropdown, setSessionTypeDropdown] =
+    useState<boolean>(false);
 
   useEffect(() => {
     localStorage.setItem("session-types", JSON.stringify(sessionTypes));
@@ -71,7 +78,7 @@ export default function StudyTracker() {
       setTime(
         `${now.getHours() < 10 ? `0${now.getHours()}` : now.getHours()}:${
           now.getMinutes() < 10 ? `0${now.getMinutes()}` : now.getMinutes()
-        }.${now.getSeconds() < 10 ? `0${now.getSeconds()}` : now.getSeconds()}`
+        }.${now.getSeconds() < 10 ? `0${now.getSeconds()}` : now.getSeconds()}`,
       );
     }, 1000);
 
@@ -94,14 +101,18 @@ export default function StudyTracker() {
     if (sess) setSessions(JSON.parse(sess));
   }, [sessionRunning]);
 
-  function changeName(e: React.SubmitEvent<HTMLFormElement> | React.FocusEvent<HTMLFormElement>) {
+  function changeName(
+    e: React.SubmitEvent<HTMLFormElement> | React.FocusEvent<HTMLFormElement>,
+  ) {
     const id = e.currentTarget.id.split("-")[2];
     const formData = new FormData(e.currentTarget);
     const newName = formData.get("newName");
     if (!newName) return;
     const name = newName.toString();
     setSessionTypes([
-      ...sessionTypes.filter((type: { name: string; id: number }) => type.id !== Number(id)),
+      ...sessionTypes.filter(
+        (type: { name: string; id: number }) => type.id !== Number(id),
+      ),
       { name: name, id: Number(id) },
     ]);
     return setEditing(false);
@@ -145,12 +156,18 @@ export default function StudyTracker() {
           <p className="text-lg font-semibold text-gray-600">Overview</p>
           <div className="flex flex-row flex-wrap gap-0.5 max-w-64">
             {getDates().map((date) => {
-              const len = Object.keys(sessions).filter((value) => value.split("//--//")[0] === date).length;
+              const len = Object.keys(sessions).filter(
+                (value) => value.split("//--//")[0] === date,
+              ).length;
               return (
                 <div
                   key={date}
                   className={`p-3 w-4 h-4 rounded-md ${
-                    len === 0 ? `bg-blue-100/40` : len < 3 ? `bg-blue-100` : `bg-blue-200`
+                    len === 0
+                      ? `bg-blue-100/40`
+                      : len < 3
+                        ? `bg-blue-100`
+                        : `bg-blue-200`
                   } ${date === curDate() ? "!bg-orange-100" : ""}`}
                   title={`${date}: ${len} session(s).`}
                 />
@@ -159,18 +176,26 @@ export default function StudyTracker() {
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex flex-row gap-2 h-fit w-fit items-end">
-              <p className="mt-4 text-base font-semibold text-gray-600">Session Types</p>
+              <p className="mt-4 text-base font-semibold text-gray-600">
+                Session Types
+              </p>
               <Button
                 onClick={() => {
                   const max =
                     sessionTypes.reduce(
-                      (m: number, type: { name: string; id: number }) => Math.max(m, type.id),
-                      0
+                      (m: number, type: { name: string; id: number }) =>
+                        Math.max(m, type.id),
+                      0,
                     ) + 1;
-                  setSessionTypes([...sessionTypes, { name: "Untitled", id: max }]);
+                  setSessionTypes([
+                    ...sessionTypes,
+                    { name: "Untitled", id: max },
+                  ]);
                   setEditing({ id: max, type: "session-type" });
                   setTimeout(() => {
-                    const form = document.getElementById(`form-sessiontype-${max}`);
+                    const form = document.getElementById(
+                      `form-sessiontype-${max}`,
+                    );
                     if (!form) return;
                     const inp = form.children[0] as HTMLInputElement;
                     inp.focus();
@@ -184,7 +209,10 @@ export default function StudyTracker() {
             </div>
             {sessionTypes.length > 0 ? (
               sessionTypes.map((sessionType: { name: string; id: number }) => (
-                <Button key={`session-type-list-${sessionType.id}`} className="w-64">
+                <Button
+                  key={`session-type-list-${sessionType.id}`}
+                  className="w-64"
+                >
                   {!editing ? (
                     <p className="text-xs text-gray-600">{sessionType.name}</p>
                   ) : (
@@ -235,7 +263,9 @@ export default function StudyTracker() {
                   {curSessionType?.name ?? sessionTypes[0].name}
                 </p>
               ) : (
-                <p className="text-sm text-gray-600 font-semibold">No sessions created.</p>
+                <p className="text-sm text-gray-600 font-semibold">
+                  No sessions created.
+                </p>
               )}
             </Button>
             <AnimatePresence>
@@ -251,20 +281,22 @@ export default function StudyTracker() {
                   animate={{ opacity: 1, translateY: 0 }}
                   className="absolute top-full mt-1 bg-gray-100/40 backdrop-blur-md shadow-sm rounded-md py-2 gap-1"
                 >
-                  {sessionTypes.map((sessionType: { name: string; id: number }) => (
-                    <Button
-                      key={`session-selection-${sessionType.id}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setCurSessionType(sessionType);
-                        setSessionTypeDropdown(false);
-                      }}
-                      className="px-4 mx-2 !shadow-none"
-                    >
-                      <p className="text-xs">{sessionType.name}</p>
-                    </Button>
-                  ))}
+                  {sessionTypes.map(
+                    (sessionType: { name: string; id: number }) => (
+                      <Button
+                        key={`session-selection-${sessionType.id}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setCurSessionType(sessionType);
+                          setSessionTypeDropdown(false);
+                        }}
+                        className="px-4 mx-2 !shadow-none"
+                      >
+                        <p className="text-xs">{sessionType.name}</p>
+                      </Button>
+                    ),
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

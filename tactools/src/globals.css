@@ -2,12 +2,12 @@
 
 .minimal-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(0,0,0,0.25) #EDEDF2;
+  scrollbar-color: rgba(0, 0, 0, 0.25) #ededf2;
   -ms-overflow-style: -ms-autohiding-scrollbar;
 }
 
 .minimal-scrollbar:hover {
-    scrollbar-color: rgba(0,0,0,0.5) #EDEDF2;
+  scrollbar-color: rgba(0, 0, 0, 0.5) #ededf2;
 }
 
 .hiding-scrollbar::-webkit-scrollbar {
@@ -16,9 +16,9 @@
 }
 
 .hiding-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #EDEDF2;
+  background-color: #ededf2;
 }
 
 .red-hue {
-  background-color: rgba(255,0,0,0.25);
+  background-color: rgba(255, 0, 0, 0.25);
 }
