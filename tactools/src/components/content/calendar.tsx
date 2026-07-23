@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from "motion/react";
 import Button from "../utils/button";
 import ContextMenu from "../utils/context-menu";
 import {
-    CalendarArrowDown,
     ChevronLeft,
     ChevronRight,
     ImportIcon,
@@ -13,7 +12,6 @@ import {
     Plus,
     Calendar as LCalendar,
     ALargeSmall,
-    Hash,
     CalendarRange,
     Clock,
     TextAlignStart,
@@ -27,6 +25,7 @@ import {
 import { useReducer, useRef, useState, useEffect } from "react";
 import { fetch as tFetch } from "@tauri-apps/plugin-http";
 import ICAL from "ical.js";
+import { Section, Task } from "./list";
 
 type RecurrenceRules = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
@@ -129,16 +128,79 @@ function Day(
         offsetDate: Date;
     }
 ) {
+    const [tasks, setTasks] = useState<Task[]>([]);
+
+    
     const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
     const targetDayIndex = daysMap.indexOf(type.toLowerCase());
     const distanceFromMonday = targetDayIndex === 0 ? 6 : targetDayIndex - 1;
 
+    
     const columnDate = new Date(offsetDate);
     columnDate.setDate(offsetDate.getDate() + distanceFromMonday);
 
+
     const startOfDayTimestamp = new Date(columnDate.getFullYear(), columnDate.getMonth(), columnDate.getDate(), 0, 0, 0, 0).getTime();
     const endOfDayTimestamp = new Date(columnDate.getFullYear(), columnDate.getMonth(), columnDate.getDate(), 23, 59, 59, 999).getTime();
+
+    useEffect(() => {
+        const fetchTasks = () => {
+        const rawLists = localStorage.getItem("listNames");
+        if (!rawLists) return;
+
+        let lists: number[] = [];
+        try {
+            lists = JSON.parse(rawLists).values.map((list: any) => Number(list.id));
+        } catch {
+            return;
+        }
+
+        const matchedTasks: Task[] = [];
+
+        lists.forEach((id) => {
+            const rawList = localStorage.getItem(`list-${id}`);
+            if (!rawList) return;
+
+            try {
+            const parsed = JSON.parse(rawList);
+            const listInfo = parsed.values || parsed;
+
+            const allTasks: Task[] = [...(listInfo.tasks || [])];
+
+            if (Array.isArray(listInfo.sections)) {
+                listInfo.sections.forEach((sec: Section) => {
+                if (Array.isArray(sec.tasks)) {
+                    allTasks.push(...sec.tasks);
+                }
+                });
+            }
+
+            allTasks.forEach((task: Task) => {
+                if (!task.due) return;
+
+                const due = new Date(task.due);
+                if (
+                due.getFullYear() === columnDate.getFullYear() &&
+                due.getMonth() === columnDate.getMonth() &&
+                due.getDate() === columnDate.getDate()
+                ) {
+                matchedTasks.push(task);
+                }
+            });
+            } catch (e) {
+            console.error("Failed to parse list data", e);
+            }
+        });
+
+        setTasks(matchedTasks);
+        };
+
+        fetchTasks(); 
+        const taskFetchInt = setInterval(fetchTasks, 1000);
+
+        return () => clearInterval(taskFetchInt);
+    }, [offsetDate.getTime(), type]);
 
     return (
         <div className="flex flex-col w-full items-center first:border-l-2 border-r-2 border-gray-100 h-full">
@@ -151,6 +213,17 @@ function Day(
                     {type} [{columnDate.getDate()}]
                 </motion.p>
             </AnimatePresence>
+            <div className={`h-8 overflow-y-auto hiding-scrollbar`}>
+                {
+                    tasks.map((task) => {
+                        return (
+                            <div className="bg-gray-100/90 backdrop-blur-md rounded-md w-28 flex flex-row items-center justify-center py-1 text-xs not-first:mt-2 mx-2">
+                                <p>{ task.name }</p>
+                            </div>
+                        )
+                    })
+                }
+            </div>
             <hr className="bg-gray-100 text-gray-100 w-full h-0.5 mt-0.5" />
             
             <div className="relative w-full h-[calc(100%-4rem)] mt-9">

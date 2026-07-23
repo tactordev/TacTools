@@ -11,7 +11,8 @@
 }
 
 .hiding-scrollbar::-webkit-scrollbar {
-  height: 5px;
+  height: 3px;
+  width: 2px;
 }
 
 .hiding-scrollbar::-webkit-scrollbar-thumb {
