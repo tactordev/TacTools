@@ -925,7 +925,7 @@ export default function Calendar() {
         let m = true;
         
         const fetchAllCalendars = async () => {
-            const events: Event[] = [];
+            const icalEvents: Event[] = [];
             const importedCalendars: {events: Event[], importUrl: string, importLink: string, title: string, id: number, visible: boolean}[] = [];
 
             for (const url of icalUrls) {
@@ -985,7 +985,7 @@ export default function Calendar() {
                     }
                 }
 
-                events.push(...pEvents);
+                icalEvents.push(...pEvents);
 
                 const calendarObj = { id: generatedId, importLink: url, importUrl: url, events: pEvents, visible: true, title: calName as string };
                 localStorage.setItem(`calendar-${generatedId}`, JSON.stringify(calendarObj));
@@ -1010,7 +1010,7 @@ export default function Calendar() {
                     }
                 });
 
-                setEvents([...events, ...allLocalEvents]);
+                setEvents([...icalEvents, ...allLocalEvents]);
             }
         };
 

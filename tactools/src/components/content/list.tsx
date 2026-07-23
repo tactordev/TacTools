@@ -19,6 +19,7 @@ import ContextMenu from "../utils/context-menu";
 import Overview from "./overview";
 import TaskInput from "../utils/task-input";
 import StudyTracker from "./study-tracker";
+import { TimerProvider } from "./timer-context";
 
 export type Task = {
     id: number;
@@ -293,7 +294,9 @@ export default function List({ tab, tabs, setTabs }: { tab: Tab; tabs: Tab[], se
             );
         case "study tracker":
             return (
-                <StudyTracker />
+                <TimerProvider>
+                    <StudyTracker />
+                </TimerProvider>
             )
     }
 
