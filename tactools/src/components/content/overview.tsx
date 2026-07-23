@@ -1,18 +1,13 @@
 "use client";
 import Loader from "../utils/loader";
 import {
-  PlusCircle,
   BadgeAlert,
   Circle,
-  Check,
-  GripVertical,
-  Trash2,
-  Edit,
   Hash,
 } from "lucide-react";
 import { Tab } from "../../main";
 import { Task, List } from "./list";
-import { useState, useEffect, useReducer } from "react";
+import { useState, useEffect } from "react";
 import { title } from "../sidebar/planning";
 import { Day, Event } from "./calendar";
 import { fetch as tFetch } from "@tauri-apps/plugin-http";
@@ -182,7 +177,7 @@ export default function Overview({
     return events.filter((event) => calendarIds.includes(event.calendarId));
   });
 
-  const [icalUrls, setIcalUrls] = useState<string[]>(() => {
+  const icalUrlGetter = () => {
     const icalUrls = localStorage.getItem("ical-urls");
     if (!icalUrls) {
       localStorage.setItem("ical-urls", JSON.stringify([]));
@@ -190,7 +185,8 @@ export default function Overview({
     }
 
     return JSON.parse(icalUrls);
-  });
+  };
+  const icalUrls = icalUrlGetter();
 
   const getCurMonDate = () => {
     const today = new Date();
@@ -315,7 +311,7 @@ export default function Overview({
         const generatedId = Math.abs(
           url
             .split("")
-            .reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0),
+            .reduce((a: any, b: any) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0),
         );
 
         const now = new Date();

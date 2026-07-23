@@ -167,7 +167,7 @@ function Task({
   const pointerUp = () => {
     setDragging(false);
 
-    const divs = getAllDivs();
+    getAllDivs();
 
     const ls = { tasks: [...listInfo.tasks], sections: [...listInfo.sections] };
 
@@ -180,9 +180,6 @@ function Task({
         ),
       };
     }
-    let curIndex: number = !curSect
-      ? ls.tasks.findIndex((t) => t.id === task.id)
-      : curSect.obj!.tasks.findIndex((t) => t.id === task.id);
 
     if (closest.current) {
       if (curSect) {
@@ -588,7 +585,7 @@ export default function List({
     return;
   };
 
-  const addSection = (e: React.MouseEvent) => {
+  const addSection = () => {
     const nid = (listInfo.sections.reduce((max, task) => {
       return Math.max(max, task.id);
     }, 0) + 1) as number;

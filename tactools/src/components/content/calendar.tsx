@@ -328,13 +328,11 @@ const NewEvent = ({
   setEvents,
   cals,
   setCals,
-  forceRefresh,
 }: {
   events: Event[];
   setEvents: (events: Event[]) => void;
   cals: any[];
   setCals: (cal: any) => void;
-  forceRefresh: () => void;
 }) => {
   const [repeat, setRepeat] = useState<RecurrenceRules>("none");
   const [repeatUntil, setRepeatUntil] = useState<string>("");
@@ -427,7 +425,7 @@ const NewEvent = ({
     return setDropdown(false);
   };
 
-  const createNewCalendar = (e: React.MouseEvent) => {
+  const createNewCalendar = () => {
     if (!form.current) return;
     const formEl = form.current;
     const formData = new FormData(formEl);
@@ -780,7 +778,7 @@ const Import = ({ loadiCal }: { loadiCal: (ical: string) => void }) => {
           <ContextMenu
             x={importMenu.x}
             y={importMenu.y}
-            onBlur={(e: React.FocusEvent) => {
+            onBlur={() => {
               setImporting(false);
               setImportMenu(false);
             }}
@@ -845,10 +843,10 @@ const EventContextMenu = ({
 }) => {
   const event = events.find((ev) => ev.uid === id);
   if (!event) return <p className="text-xs text-gray-600">Unknown event.</p>;
-  const [repeat, setRepeat] = useState<RecurrenceRules>(
+  const [repeat,] = useState<RecurrenceRules>(
     event.recurrence || "none",
   );
-  const [repeatUntil, setRepeatUntil] = useState<string>(
+  const [repeatUntil,] = useState<string>(
     event.recurrenceUntil
       ? new Date(event.recurrenceUntil).toISOString().slice(0, 10)
       : "",
@@ -1250,7 +1248,7 @@ export default function Calendar() {
     return startOfWeek;
   };
 
-  const [fr, forceRefresh] = useReducer((i) => i + 1, 0);
+  const [, forceRefresh] = useReducer((i) => i + 1, 0);
   const [monDate, setMonDate] = useState<Date>(() => {
     return getCurMonDate();
   });
@@ -1537,7 +1535,6 @@ export default function Calendar() {
           setEvents={setEvents}
           cals={cals}
           setCals={setCals}
-          forceRefresh={forceRefresh}
         />
         <Import loadiCal={loadiCal} />
         <TimeLine />
@@ -1603,7 +1600,7 @@ export default function Calendar() {
                       <div className="flex flex-row items-center gap-1">
                         {cal.visible ? (
                           <SquareCheck
-                            onClick={(e: React.MouseEvent) => {
+                            onClick={() => {
                               const calendars = [
                                 ...cals.map((c) => {
                                   c.id === cal.id ? (c.visible = false) : null;
@@ -1626,7 +1623,7 @@ export default function Calendar() {
                           />
                         ) : (
                           <Square
-                            onClick={(e: React.MouseEvent) => {
+                            onClick={() => {
                               const calendars = [
                                 ...cals.map((c) => {
                                   c.id === cal.id ? (c.visible = true) : null;
