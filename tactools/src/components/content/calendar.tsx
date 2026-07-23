@@ -114,7 +114,7 @@ function toDatetimeLocalValue(d: Date): string {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function Day(
+export function Day(
     {
         type,
         events,
