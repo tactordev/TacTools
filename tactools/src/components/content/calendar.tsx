@@ -999,18 +999,11 @@ export default function Calendar() {
                     return Array.from(map.values());
                 });
 
-                const allLocalEvents: Event[] = [];
-                const allIds = new Set([...cals.map(c => c.id), ...importedCalendars.map(c => c.id)]);
-                allIds.forEach((id) => {
-                    const item = localStorage.getItem(`calendar-${id}`);
-                    if (!item) return;
-                    const parsed = JSON.parse(item);
-                    if (!icalUrls.includes(parsed.importLink)) {
-                        allLocalEvents.push(...parsed.events);
-                    }
+                setEvents(prevEvents => {
+                    const importedIds = new Set(importedCalendars.map(c => c.id));
+                    const kept = prevEvents.filter(e => !importedIds.has(e.calendarId));
+                    return [...kept, ...icalEvents];
                 });
-
-                setEvents([...icalEvents, ...allLocalEvents]);
             }
         };
 
