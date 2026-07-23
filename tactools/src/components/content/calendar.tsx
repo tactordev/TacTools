@@ -927,6 +927,18 @@ export default function Calendar() {
         const fetchAllCalendars = async () => {
             const icalEvents: Event[] = [];
             const importedCalendars: {events: Event[], importUrl: string, importLink: string, title: string, id: number, visible: boolean}[] = [];
+            const rawCurCals = localStorage.getItem("loaded-calendars");
+            const cals = [];
+            if (rawCurCals) {
+                for (const calId of JSON.parse(rawCurCals)) {
+                    const rawCal = localStorage.getItem(`calendar-${calId}`);
+                    if (!rawCal) continue;
+                    const cal = JSON.parse(rawCal);
+                    if (cal.importUrl.trim() !== "") {
+                        cals.push(cal);
+                    }
+                }
+            }
 
             for (const url of icalUrls) {
                 const response = await tFetch(url);
@@ -987,7 +999,9 @@ export default function Calendar() {
 
                 icalEvents.push(...pEvents);
 
-                const calendarObj = { id: generatedId, importLink: url, importUrl: url, events: pEvents, visible: true, title: calName as string };
+                
+                const curCalInfo = cals.filter((cal) => cal.importUrl.trim() === url);
+                const calendarObj = { id: generatedId, importLink: url, importUrl: url, events: pEvents, visible: curCalInfo[0]?.visible ?? true, title: calName as string };
                 localStorage.setItem(`calendar-${generatedId}`, JSON.stringify(calendarObj));
                 importedCalendars.push(calendarObj);
             }
