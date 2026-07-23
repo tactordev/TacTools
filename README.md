@@ -3,6 +3,9 @@
 ## Description
 This is a project about keeping yourself organised. It brings features from many different productivity apps into one place, whether that be: Todoist, Obsidian, YPT, Notion, etc. It allows you to take control of your work and plan it effectively. 
 
+## Demo
+https://github.com/user-attachments/assets/0d12f40c-aa85-43c1-9894-8a57f4549b12
+(Or view on YouTube: https://youtu.be/-kItpbrLaRc?si=pLbuwd4J2vyhQVdE)
 
 ## Technical
 This project is made using Tauri v2 + React.
